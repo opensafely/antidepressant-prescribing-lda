@@ -30,6 +30,18 @@
       "downloaded_at": "2022-01-28 12:03:05.286304Z",
       "sha": "e63962fbaf4822cc4182331859656d55e1214b02"
     },
+    "nhsd-primary-care-domain-refsets-deprpcapu_cod.csv": {
+      "id": "nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812",
+      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812/",
+      "downloaded_at": "2022-02-07 09:39:28.680203Z",
+      "sha": "3370d7e4cd29e58c601a5d1a929694d40943f2b3"
+    },
+    "nhsd-primary-care-domain-refsets-deprpcadec_cod.csv": {
+      "id": "nhsd-primary-care-domain-refsets/deprpcadec_cod/20200812",
+      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprpcadec_cod/20200812/",
+      "downloaded_at": "2022-02-07 09:39:28.893268Z",
+      "sha": "48dfee6f515e12f4745e5c69502e8675db0fc1c9"
+    },
     "primis-covid19-vacc-uptake-eth2001.csv": {
       "id": "primis-covid19-vacc-uptake/eth2001/v1",
       "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/eth2001/v1/",
