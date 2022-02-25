@@ -22,6 +22,7 @@ from codelists import (
     autism_codes,
     carehome_primis_codes,
     depression_codes,
+    depression_resolved_codes,
     depression_review_codes,
 )
 from config import start_date, end_date, codelist_path, demographics
@@ -60,8 +61,82 @@ study = StudyDefinition(
             "registered_at_start",
             registered_at_start=patients.registered_as_of("index_date"),
         ),
+        # Groups
+        # Learning disabilities
+        learning_disability=patients.with_these_clinical_events(
+            learning_disability_codes,
+            on_or_before="index_date",
+            returning="binary_flag",
+            return_expectations={"incidence": 0.2},
+        ),
+        # Autism
+        autism=patients.with_these_clinical_events(
+            autism_codes,
+            on_or_before="index_date",
+            returning="binary_flag",
+            return_expectations={"incidence": 0.3},
+        ),
+    ),
+    # Common demographic variables
+    **demographic_variables,
+    # QOF DEP003
+    **dep003_variables,
+    # Other subgroups
+    # Care home
+    care_home=patients.with_these_clinical_events(
+        carehome_primis_codes,
+        on_or_before="index_date",
+        returning="binary_flag",
+        return_expectations={"incidence": 0.2},
+    ),
+    # Depression
+    depression=patients.satisfying(
+        """
+        new_depression_date AND
+	NOT depression_resolved
+        """,
+        new_depression_date=patients.with_these_clinical_events(
+            codelist=depression_codes,
+            returning="date",
+            date_format="YYYY-MM-DD",
+            find_last_match_in_period=True,
+            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            return_expectations={
+                "date": {
+                    "earliest": "first_day_of_month(index_date)",
+                    "latest": "last_day_of_month(index_date)",
+                },
+                "incidence": 0.98,
+            },
+        ),
+        depression_resolved=patients.with_these_clinical_events(
+            codelist=depression_resolved_codes,
+            returning="binary_flag",
+            date_format="YYYY-MM-DD",
+            find_last_match_in_period=True,
+            between=["new_depression_date", "last_day_of_month(index_date)"],
+            return_expectations={"incidence": 0.01},
+        ),
+        return_expectations={"incidence": 0.1},
+    ),
+    # New depression
+    new_depression=patients.satisfying(
+        """
+        depression_date AND
+	NOT depression_resolved AND
+        NOT previous
+        """,
+        previous=patients.with_these_clinical_events(
+            codelist=depression_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            between=["new_depression_date - 2 years", "new_depression_date - 1 day"],
+            return_expectations={"incidence": 0.01},
+        ),
+        return_expectations={"incidence": 0.1},
     ),
     # Antidepressant Prescriptions
+    # TODO: change this to a for loop for each medication
     # 1. Number of patients who’ve been prescribed each antidepressant this month
     # 2. Number of patients with a first prescriptions of each ad this month (defined as px for AD where none issued in previous two years)
     # SSRIs
@@ -98,101 +173,6 @@ study = StudyDefinition(
             return_expectations={"incidence": 0.5},
         ),
     ),
-    # TODO: when codelists are completed tricyclics, other antidepressants, and ALL
-    # Depression diagnosis
-    # 1. Number of patients who have a current diagnosis of depression (exclude those with a depression resolved code)
-    # 2. Number of patients with a new diagnosis of depression
-    depression=patients.satisfying(
-        """
-    depression_current_date
-    AND
-    NOT (depression_resolved)
-    """,
-        depression_current_date=patients.with_these_clinical_events(
-            depression_codes,
-            returning="date",
-            find_last_match_in_period=True,
-            on_or_before="last_day_of_month(index_date)",
-            return_expectations={"incidence": 0.1},
-        ),
-        depression_resolved=patients.with_these_clinical_events(
-            depression_codes,
-            returning="binary_flag",
-            find_last_match_in_period=True,
-            between=[
-                "depression_current_date + 1 day",
-                "last_day_of_month(index_date)",
-            ],
-            return_expectations={"incidence": 0.5},
-        ),
-    ),
-    # TODO: Should we exclude if it is also resolved in the same month?
-    depression_incident=patients.satisfying(
-        """
-    depression_incident_date
-    AND
-    NOT depression_last_date
-    AND
-    NOT depression_incident_resolved
-    """,
-        return_expectations={
-            "incidence": 0.01,
-        },
-        depression_incident_date=patients.with_these_clinical_events(
-            depression_codes,
-            returning="date",
-            find_last_match_in_period=True,
-            between=["index_date", "last_day_of_month(index_date)"],
-            return_expectations={"incidence": 0.1},
-        ),
-        depression_last_date=patients.with_these_clinical_events(
-            depression_codes,
-            returning="date",
-            find_first_match_in_period=True,
-            between=[
-                "depression_incident_date - 2 year",
-                "depression_incident_date - 1 day",
-            ],
-            return_expectations={"incidence": 0.5},
-        ),
-        depression_incident_resolved=patients.with_these_clinical_events(
-            depression_codes,
-            returning="binary_flag",
-            find_last_match_in_period=True,
-            between=[
-                "depression_incident_date + 1 day",
-                "last_day_of_month(index_date)",
-            ],
-            return_expectations={"incidence": 0.5},
-        ),
-    ),
-    # TODO: Any antidepressant current prescription without diagnosis (could also do in postprocessing)
-    # Common demographic variables
-    **demographic_variables,
-    # QOF DEP003
-    **dep003_variables,
-    # Groups
-    # Learning disabilities
-    learning_disability=patients.with_these_clinical_events(
-        learning_disability_codes,
-        on_or_before="index_date",
-        returning="binary_flag",
-        return_expectations={"incidence": 0.2},
-    ),
-    # Autism
-    autism=patients.with_these_clinical_events(
-        autism_codes,
-        on_or_before="index_date",
-        returning="binary_flag",
-        return_expectations={"incidence": 0.3},
-    ),
-    # Care home
-    care_home=patients.with_these_clinical_events(
-        carehome_primis_codes,
-        on_or_before="index_date",
-        returning="binary_flag",
-        return_expectations={"incidence": 0.2},
-    ),
 )
 
 
@@ -200,4 +180,20 @@ study = StudyDefinition(
 
 # TODO: Automate this with a for loop
 
-measures = []
+# --- DEFINE MEASURES ---
+measures = [
+    Measure(
+        id="practice_rate",
+        numerator="numerator",
+        denominator="denominator",
+        group_by=["practice"],
+    ),
+]
+for d in demographics:
+    m = Measure(
+        id="prevalence_rate_{}".format(d),
+        numerator="numerator",
+        denominator="denominator",
+        group_by=[d],
+    )
+    measures.append(m)

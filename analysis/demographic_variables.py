@@ -10,15 +10,6 @@ demographic_variables = dict(
             "incidence": 0.001,
         },
     ),
-    # Age as of end of NHS financial year (March 31st)
-    age_financial_year=patients.age_as_of(
-        "last_day_of_nhs_financial_year(index_date) + 1 day",
-        return_expectations={
-            "rate": "universal",
-            "int": {"distribution": "population_ages"},
-            "incidence": 0.001,
-        },
-    ),
     # Sex
     sex=patients.sex(
         return_expectations={

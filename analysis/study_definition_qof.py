@@ -29,7 +29,7 @@ from codelists import (
 from demographic_variables import demographic_variables
 from dep003_variables import dep003_variables
 
-from config import start_date, end_date, depr_register_date, codelist_path, demographics
+from config import start_date, end_date, codelist_path, demographics
 
 # Define study population and variables
 study = StudyDefinition(
@@ -49,10 +49,7 @@ study = StudyDefinition(
         (NOT has_died) AND
         # TODO: why are we excluding intersex or blank? 
         (sex = "M" OR sex = "F") AND
-        # TODO: how do we choose the upper threshold? 
-        (age >=18 AND age < 110)
-        # depression_date AND
-        # NOT (depression_resolved)
+        depression_register
         """,
         has_died=patients.died_from_any_cause(
             on_or_before="index_date",
@@ -61,17 +58,6 @@ study = StudyDefinition(
         ),
         registered=patients.registered_as_of(
             "index_date", return_expectations={"incidence": 0.9}
-        ),
-        # TODO: change between to depr_register_date
-        depression_resolved=patients.with_these_clinical_events(
-            codelist=depression_resolved_codes,
-            returning="binary_flag",
-            find_last_match_in_period=True,
-            between=[
-                "depression_date + 1 day",
-                "last_day_of_month(index_date)",
-            ],
-            return_expectations={"incidence": 0.01},
         ),
     ),
     # QOF variables
@@ -84,16 +70,16 @@ study = StudyDefinition(
 measures = [
     Measure(
         id="practice_rate",
-        numerator="event",
-        denominator="population",
+        numerator="numerator",
+        denominator="denominator",
         group_by=["practice"],
     ),
 ]
 for d in demographics:
     m = Measure(
         id="prevalence_rate_{}".format(d),
-        numerator="event",
-        denominator="population",
+        numerator="numerator",
+        denominator="denominator",
         group_by=[d],
     )
     measures.append(m)

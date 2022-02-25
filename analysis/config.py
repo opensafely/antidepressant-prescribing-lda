@@ -8,7 +8,7 @@ end_date = "2022-01-01"
 depr_register_date = "2006-04-01"
 
 # demographic variables by which code use is broken down
-demographics = ["sex", "imd", "ethnicity"]
+demographics = ["sex", "imd"]
 
 # name of measure
 marker = "Depression review"
