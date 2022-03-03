@@ -27,4 +27,4 @@ for file in os.listdir("output/"):
             merged_df = df.merge(ethnicity_df, how="left", on="patient_id")
 
             # merged_df.to_feather(file_path)
-            merged_df.to_csv(file_path)
+            merged_df.to_csv(file_path, index=False)

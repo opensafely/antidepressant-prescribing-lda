@@ -1,3 +1,11 @@
+#####################################################################
+
+# Reusable demographic variables
+
+# Can be imported into a study definition to apply to any population
+
+####################################################################
+
 from cohortextractor import patients
 
 # Age

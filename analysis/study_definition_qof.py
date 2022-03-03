@@ -42,12 +42,12 @@ study = StudyDefinition(
     },
     # Define the study population
     # Number of patients who have a current diagnosis of depression (exclude those with a depression resolved code)
+    # TODO: should these index_dates be in reference to nhs financial year?
     population=patients.satisfying(
         """
         # Define general population parameters
         registered AND 
         (NOT has_died) AND
-        # TODO: why are we excluding intersex or blank? 
         (sex = "M" OR sex = "F") AND
         depression_register
         """,
@@ -68,16 +68,18 @@ study = StudyDefinition(
 
 # --- DEFINE MEASURES ---
 measures = [
+    # QOF achievement by practice
     Measure(
-        id="practice_rate",
+        id="qof_practice_rate",
         numerator="numerator",
         denominator="denominator",
         group_by=["practice"],
     ),
 ]
+# QOF achievement by each demographic in the config file
 for d in demographics:
     m = Measure(
-        id="prevalence_rate_{}".format(d),
+        id="qof_{}_rate".format(d),
         numerator="numerator",
         denominator="denominator",
         group_by=[d],

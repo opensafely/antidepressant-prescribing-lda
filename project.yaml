@@ -5,31 +5,77 @@ expectations:
 
 actions:
 
+  ####################
+  # Cohort Generation
+  ####################
+  
+  # Generate depression register variable among the total population by month
+  generate_study_population_prevalence:
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_prevalence --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output
+    outputs:
+      highly_sensitive:
+        cohort: output/input_prevalence_*.csv
+   
+
+  # Generate QOF variables for those on the depression register by month
+  generate_study_population_qof:
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_qof --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output
+    outputs:
+      highly_sensitive:
+        cohort: output/input_qof_*.csv
+  
+  # Generate depression and prescription variables (including QOF) for those with LD&A by month
   generate_study_population:
     run: cohortextractor:latest generate_cohort --study-definition study_definition --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output
     outputs:
       highly_sensitive:
         cohort: output/input_*.csv
 
-  generate_study_population_qof:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_qof --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output
+  ####################
+  # Join ethnicity to all generated input files
+  # Efficiency fix https://github.com/opensafely/research-template
+  # BUT BEWARE STALE DATA
+  ###################
+  join_ethnicity:
+    run: python:latest python analysis/join_ethnicity.py
+    needs: [generate_study_population_prevalence, generate_study_population_qof, generate_study_population]
     outputs:
       highly_sensitive:
-        cohort: output/input_qof_*.csv
+        # TODO: we currently evade the overwrite check by not using input_*.csv as the regex
+        cohort: output/input*.csv
 
-  generate_measures:
+  ####################
+  # Measures 
+  ####################
+  
+  # Output summary prevalence value by date
+  generate_measures_prevalence:
+      run: cohortextractor:latest generate_measures --study-definition study_definition_prevalence --output-dir=output
+      needs: [generate_study_population_prevalence]
+      outputs:
+        moderately_sensitive:
+          # Only output the single summary file
+          measure_csv: output/measure_prevalence_rate.csv
+
+  # Output the summary QOF values by date
+  generate_measures_qof:
       run: cohortextractor:latest generate_measures --study-definition study_definition_qof --output-dir=output
       needs: [generate_study_population_qof]
       outputs:
         moderately_sensitive:
-          measure_csv: output/measure_*_rate.csv
+          # Only output the single summary file
+          measure_csv: output/measure_qof_*_rate.csv
+       
 
-  calculate_rates:
-      run: python:latest python analysis/rate_calculations.py
-      needs: [generate_measures]
+  # Output the summary LD&A values by date
+  generate_measures:
+      run: cohortextractor:latest generate_measures --study-definition study_definition --output-dir=output
+      needs: [generate_study_population]
       outputs:
         moderately_sensitive:
-          tables: output/rate_table_*.csv
-          child_code_table: output/child_code_table.csv
-          plots: output/plot_*.png
-          decile_chart: output/decile_chart.png
+          # Only output the single summary file
+          measure_csv: output/measure_*_rate.csv
+
+  #############################
+  # TODO: actions for plotting 
+  #############################

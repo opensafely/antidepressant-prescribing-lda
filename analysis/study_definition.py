@@ -92,10 +92,10 @@ study = StudyDefinition(
     # Depression
     depression=patients.satisfying(
         """
-        new_depression_date AND
+        depression_date AND
 	NOT depression_resolved
         """,
-        new_depression_date=patients.with_these_clinical_events(
+        depression_date=patients.with_these_clinical_events(
             codelist=depression_codes,
             returning="date",
             date_format="YYYY-MM-DD",
@@ -114,7 +114,7 @@ study = StudyDefinition(
             returning="binary_flag",
             date_format="YYYY-MM-DD",
             find_last_match_in_period=True,
-            between=["new_depression_date", "last_day_of_month(index_date)"],
+            between=["depression_date", "last_day_of_month(index_date)"],
             return_expectations={"incidence": 0.01},
         ),
         return_expectations={"incidence": 0.1},
@@ -130,58 +130,24 @@ study = StudyDefinition(
             codelist=depression_codes,
             returning="binary_flag",
             find_last_match_in_period=True,
-            between=["new_depression_date - 2 years", "new_depression_date - 1 day"],
+            between=["depression_date - 2 years", "depression_date - 1 day"],
             return_expectations={"incidence": 0.01},
         ),
         return_expectations={"incidence": 0.1},
     ),
-    # Antidepressant Prescriptions
-    # TODO: change this to a for loop for each medication
-    # 1. Number of patients who’ve been prescribed each antidepressant this month
-    # 2. Number of patients with a first prescriptions of each ad this month (defined as px for AD where none issued in previous two years)
     # SSRIs
     antidepressant_ssri=patients.with_these_medications(
-        ssri_codes,
+        codelist=ssri_codes,
         between=["index_date", "last_day_of_month(index_date)"],
         returning="binary_flag",
         return_expectations={"incidence": 0.5},
-    ),
-    antidepressant_ssri_first=patients.satisfying(
-        """
-    antidepressant_ssri_current_date
-    AND
-    NOT antidepressant_ssri_last_date
-    """,
-        return_expectations={
-            "incidence": 0.01,
-        },
-        antidepressant_ssri_current_date=patients.with_these_medications(
-            ssri_codes,
-            returning="date",
-            find_last_match_in_period=True,
-            between=["index_date", "last_day_of_month(index_date)"],
-            return_expectations={"incidence": 0.1},
-        ),
-        antidepressant_ssri_last_date=patients.with_these_medications(
-            ssri_codes,
-            returning="date",
-            find_first_match_in_period=True,
-            between=[
-                "antidepressant_ssri_current_date - 2 year",
-                "antidepressant_ssri_current_date - 1 day",
-            ],
-            return_expectations={"incidence": 0.5},
-        ),
-    ),
+    )
 )
 
-
 # --- DEFINE MEASURES ---
 
-# TODO: Automate this with a for loop
-
-# --- DEFINE MEASURES ---
 measures = [
+    # QOF achievement by practice
     Measure(
         id="practice_rate",
         numerator="numerator",
@@ -189,9 +155,10 @@ measures = [
         group_by=["practice"],
     ),
 ]
+# QOF achievement by each demographic in the config file
 for d in demographics:
     m = Measure(
-        id="prevalence_rate_{}".format(d),
+        id="{}_rate".format(d),
         numerator="numerator",
         denominator="denominator",
         group_by=[d],

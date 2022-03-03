@@ -1,3 +1,15 @@
+#####################################################################
+
+# Reusable DEP003 QOF variables
+# * Age financial year
+# * Relevant QOF register
+# * Indicator denominator and numerator
+
+# Can be imported into a study definition to apply to any population
+
+####################################################################
+
+
 from cohortextractor import patients
 
 from codelists import (
@@ -23,7 +35,7 @@ dep003_variables = dict(
     depression_register=patients.satisfying(
         """
         depression_since_register_date AND
-        NOT depression_resolved AND
+        NOT depression_register_resolved AND
         age_financial_year >= 18 AND age_financial_year <110
         """,
         depression_since_register_date=patients.with_these_clinical_events(
@@ -37,7 +49,7 @@ dep003_variables = dict(
                 "incidence": 0.98,
             },
         ),
-        depression_resolved=patients.with_these_clinical_events(
+        depression_register_resolved=patients.with_these_clinical_events(
             codelist=depression_resolved_codes,
             returning="binary_flag",
             date_format="YYYY-MM-DD",
@@ -96,30 +108,25 @@ dep003_variables = dict(
             return_expectations={"incidence": 0.6},
         ),
     ),
-    # These are top level variables because we want them for the flowchart
-    # TODO: look into measures framework to see if I can compute count without exposing
-    unsuitable=patients.with_these_clinical_events(
-        codelist=depression_review_unsuitable_codes,
-        returning="binary_flag",
-        find_last_match_in_period=True,
-        on_or_after="last_day_of_nhs_financial_year(index_date) - 12 months",
-        return_expectations={"incidence": 0.01},
-    ),
-    dissent=patients.with_these_clinical_events(
-        codelist=depression_review_dissent_codes,
-        returning="binary_flag",
-        find_last_match_in_period=True,
-        on_or_after="last_day_of_nhs_financial_year(index_date) - 12 months",
-        return_expectations={"incidence": 0.01},
-    ),
     denominator=patients.satisfying(
         """
         numerator OR
         financial_year AND
-        # Rule 4: Reject unsuitable in the 12 months leading up to pped
-        (NOT unsuitable AND
-        # Rule 5: Reject informed dissent in thr 12 months leading up to pped
-        NOT dissent)
+        (NOT unsuitable AND NOT dissent)
         """,
+        dissent=patients.with_these_clinical_events(
+            codelist=depression_review_dissent_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            on_or_after="last_day_of_nhs_financial_year(index_date) - 12 months",
+            return_expectations={"incidence": 0.01},
+        ),
+        unsuitable=patients.with_these_clinical_events(
+            codelist=depression_review_unsuitable_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            on_or_after="last_day_of_nhs_financial_year(index_date) - 12 months",
+            return_expectations={"incidence": 0.01},
+        ),
     ),
 )
