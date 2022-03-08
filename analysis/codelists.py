@@ -24,6 +24,21 @@ ssri_codes = codelist_from_csv(
     system="snomed",
     column="dmd_id",
 )
+tricyclic_codes = codelist_from_csv(
+    "codelists/opensafely-tricyclic-and-related-antidepressants-dmd.csv",
+    system="snomed",
+    column="dmd_id",
+)
+maoi_codes = codelist_from_csv(
+    "codelists/opensafely-monoamine-oxidase-inhibitors-dmd.csv",
+    system="snomed",
+    column="dmd_id",
+)
+other_antidepressant_codes = codelist_from_csv(
+    "codelists/opensafely-other-antidepressants-dmd.csv",
+    system="snomed",
+    column="dmd_id",
+)
 
 ## Groups
 

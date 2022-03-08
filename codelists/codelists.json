@@ -59,6 +59,24 @@
       "url": "https://codelists.opensafely.org/codelist/opensafely/selective-serotonin-reuptake-inhibitors-dmd/6a572e55/",
       "downloaded_at": "2022-01-28 12:03:05.830982Z",
       "sha": "85e3b0949455aa282fd26b09d523905127160789"
+    },
+    "opensafely-tricyclic-and-related-antidepressants-dmd.csv": {
+      "id": "opensafely/tricyclic-and-related-antidepressants-dmd/1268eae1",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/tricyclic-and-related-antidepressants-dmd/1268eae1/",
+      "downloaded_at": "2022-03-08 10:26:50.586517Z",
+      "sha": "83a2fab241ad02c9175479b8cad6955395b2f0ee"
+    },
+    "opensafely-monoamine-oxidase-inhibitors-dmd.csv": {
+      "id": "opensafely/monoamine-oxidase-inhibitors-dmd/2b785e16",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/monoamine-oxidase-inhibitors-dmd/2b785e16/",
+      "downloaded_at": "2022-03-08 10:26:50.904539Z",
+      "sha": "1a1da18d75a6a1111929df9c2ab2799d2229a95c"
+    },
+    "opensafely-other-antidepressants-dmd.csv": {
+      "id": "opensafely/other-antidepressants-dmd/795977ab",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/other-antidepressants-dmd/795977ab/",
+      "downloaded_at": "2022-03-08 10:26:51.239102Z",
+      "sha": "d65ff8ed8378bf5c7875858b55b76527ec7f1574"
     }
   }
 }

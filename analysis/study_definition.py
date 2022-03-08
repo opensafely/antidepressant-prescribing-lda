@@ -18,6 +18,9 @@ from cohortextractor import (
 # Import codelists from codelist.py (which pulls them from the codelist folder)
 from codelists import (
     ssri_codes,
+    tricyclic_codes,
+    maoi_codes,
+    other_antidepressant_codes,
     learning_disability_codes,
     autism_codes,
     carehome_primis_codes,
@@ -122,11 +125,10 @@ study = StudyDefinition(
     # New depression
     new_depression=patients.satisfying(
         """
-        depression_date AND
-	NOT depression_resolved AND
-        NOT previous
+        depression AND
+        NOT previous_depression
         """,
-        previous=patients.with_these_clinical_events(
+        previous_depression=patients.with_these_clinical_events(
             codelist=depression_codes,
             returning="binary_flag",
             find_last_match_in_period=True,
@@ -136,12 +138,165 @@ study = StudyDefinition(
         return_expectations={"incidence": 0.1},
     ),
     # SSRIs
-    antidepressant_ssri=patients.with_these_medications(
-        codelist=ssri_codes,
-        between=["index_date", "last_day_of_month(index_date)"],
-        returning="binary_flag",
-        return_expectations={"incidence": 0.5},
-    )
+    antidepressant_ssri=patients.satisfying(
+        """
+        antidepressant_ssri_date
+        """,
+        antidepressant_ssri_date=patients.with_these_medications(
+            codelist=ssri_codes,
+            returning="date",
+            date_format="YYYY-MM-DD",
+            find_last_match_in_period=True,
+            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            return_expectations={
+                "date": {
+                    "earliest": "first_day_of_month(index_date)",
+                    "latest": "last_day_of_month(index_date)",
+                },
+            },
+        ),
+    ),
+    new_antidepressant_ssri=patients.satisfying(
+        """
+        antidepressant_ssri AND
+        NOT previous_ssri
+        """,
+        previous_ssri=patients.with_these_medications(
+            codelist=ssri_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            between=[
+                "antidepressant_ssri_date - 2 years",
+                "antidepressant_ssri_date - 1 day",
+            ],
+            return_expectations={"incidence": 0.01},
+        ),
+        return_expectations={"incidence": 0.01},
+    ),
+    # Tricyclic
+    antidepressant_tricyclic=patients.satisfying(
+        """
+        antidepressant_tricyclic_date
+        """,
+        antidepressant_tricyclic_date=patients.with_these_medications(
+            codelist=tricyclic_codes,
+            returning="date",
+            date_format="YYYY-MM-DD",
+            find_last_match_in_period=True,
+            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            return_expectations={
+                "date": {
+                    "earliest": "first_day_of_month(index_date)",
+                    "latest": "last_day_of_month(index_date)",
+                },
+            },
+        ),
+    ),
+    new_antidepressant_tricyclic=patients.satisfying(
+        """
+        antidepressant_tricyclic AND
+        NOT previous_tricyclic
+        """,
+        previous_tricyclic=patients.with_these_medications(
+            codelist=tricyclic_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            between=[
+                "antidepressant_ssri_date - 2 years",
+                "antidepressant_ssri_date - 1 day",
+            ],
+            return_expectations={"incidence": 0.01},
+        ),
+        return_expectations={"incidence": 0.01},
+    ),
+    # MAOI
+    antidepressant_maoi=patients.satisfying(
+        """
+        antidepressant_maoi_date
+        """,
+        antidepressant_maoi_date=patients.with_these_medications(
+            codelist=maoi_codes,
+            returning="date",
+            date_format="YYYY-MM-DD",
+            find_last_match_in_period=True,
+            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            return_expectations={
+                "date": {
+                    "earliest": "first_day_of_month(index_date)",
+                    "latest": "last_day_of_month(index_date)",
+                },
+            },
+        ),
+    ),
+    new_antidepressant_maoi=patients.satisfying(
+        """
+        antidepressant_maoi AND
+        NOT previous_maoi
+        """,
+        previous_maoi=patients.with_these_medications(
+            codelist=maoi_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            between=[
+                "antidepressant_maoi_date - 2 years",
+                "antidepressant_maoi_date - 1 day",
+            ],
+            return_expectations={"incidence": 0.01},
+        ),
+        return_expectations={"incidence": 0.01},
+    ),
+    # Other antidepressant
+    antidepressant_other=patients.satisfying(
+        """
+        antidepressant_other_date
+        """,
+        antidepressant_other_date=patients.with_these_medications(
+            codelist=other_antidepressant_codes,
+            returning="date",
+            date_format="YYYY-MM-DD",
+            find_last_match_in_period=True,
+            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            return_expectations={
+                "date": {
+                    "earliest": "first_day_of_month(index_date)",
+                    "latest": "last_day_of_month(index_date)",
+                },
+            },
+        ),
+    ),
+    new_antidepressant_other=patients.satisfying(
+        """
+        antidepressant_other AND
+        NOT previous_other
+        """,
+        previous_other=patients.with_these_medications(
+            codelist=other_antidepressant_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            between=[
+                "antidepressant_other_date - 2 years",
+                "antidepressant_other_date - 1 day",
+            ],
+            return_expectations={"incidence": 0.01},
+        ),
+        return_expectations={"incidence": 0.01},
+    ),
+    antidepressant_any=patients.satisfying(
+        """
+        antidepressant_ssri OR
+        antidepressant_tricyclic OR
+        antidepressant_maoi OR
+        antidepressant_other
+        """
+    ),
+    new_antidepressant_any=patients.satisfying(
+        """
+        new_antidepressant_ssri OR
+        new_antidepressant_tricyclic OR
+        new_antidepressant_maoi OR
+        new_antidepressant_other
+        """,
+    ),
 )
 
 # --- DEFINE MEASURES ---
