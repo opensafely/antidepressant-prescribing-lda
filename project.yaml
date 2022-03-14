@@ -15,21 +15,27 @@ actions:
     outputs:
       highly_sensitive:
         cohort: output/input_prevalence_*.csv
-   
+  
+  # Since this runs on everyone, we can reuse for both studies 
+  generate_study_population_ethnicity:
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_ethnicity --output-dir=output
+    outputs:
+      highly_sensitive:
+        cohort: output/input_ethnicity.csv
 
   # Generate QOF variables for those on the depression register by month
   generate_study_population_qof:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_qof --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_qof --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/qof
     outputs:
       highly_sensitive:
-        cohort: output/input_qof_*.csv
+        cohort: output/qof/input_qof_*.csv
   
   # Generate depression and prescription variables (including QOF) for those with LD&A by month
   generate_study_population:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output
+    run: cohortextractor:latest generate_cohort --study-definition study_definition --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/lda
     outputs:
       highly_sensitive:
-        cohort: output/input_*.csv
+        cohort: output/lda/input_*.csv
 
   ####################
   # Join ethnicity to all generated input files
@@ -38,11 +44,11 @@ actions:
   ###################
   join_ethnicity:
     run: python:latest python analysis/join_ethnicity.py
-    needs: [generate_study_population_prevalence, generate_study_population_qof, generate_study_population]
+    needs: [generate_study_population_ethnicity, generate_study_population_qof, generate_study_population]
     outputs:
       highly_sensitive:
         # TODO: we currently evade the overwrite check by not using input_*.csv as the regex
-        cohort: output/input*.csv
+        cohort: output/*/input*.csv
 
   ####################
   # Measures 
@@ -59,22 +65,22 @@ actions:
 
   # Output the summary QOF values by date
   generate_measures_qof:
-      run: cohortextractor:latest generate_measures --study-definition study_definition_qof --output-dir=output
-      needs: [generate_study_population_qof]
+      run: cohortextractor:latest generate_measures --study-definition study_definition_qof --output-dir=output/qof
+      needs: [join_ethnicity, generate_study_population_qof]
       outputs:
         moderately_sensitive:
           # Only output the single summary file
-          measure_csv: output/measure_qof_*_rate.csv
+          measure_csv: output/qof/measure_qof_*_rate.csv
        
 
   # Output the summary LD&A values by date
   generate_measures:
-      run: cohortextractor:latest generate_measures --study-definition study_definition --output-dir=output
-      needs: [generate_study_population]
+      run: cohortextractor:latest generate_measures --study-definition study_definition --output-dir=output/lda
+      needs: [join_ethnicity, generate_study_population]
       outputs:
         moderately_sensitive:
           # Only output the single summary file
-          measure_csv: output/measure_*_rate.csv
+          measure_csv: output/lda/measure_*_rate.csv
 
   #############################
   # TODO: actions for plotting 

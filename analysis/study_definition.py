@@ -92,6 +92,7 @@ study = StudyDefinition(
         returning="binary_flag",
         return_expectations={"incidence": 0.2},
     ),
+    # TODO: Look into a way to loop the creation of these variables
     # Depression
     depression=patients.satisfying(
         """
@@ -300,22 +301,59 @@ study = StudyDefinition(
 )
 
 # --- DEFINE MEASURES ---
-
 measures = [
     # QOF achievement by practice
     Measure(
-        id="practice_rate",
+        id="qof_practice_rate",
         numerator="numerator",
         denominator="denominator",
         group_by=["practice"],
     ),
 ]
-# QOF achievement by each demographic in the config file
-for d in demographics:
+outcomes = [
+    "depression",
+    "antidepressant_ssri",
+    "antidepressant_tricyclic",
+    "antidepressant_maoi",
+    "antidepressant_other",
+    "antidepressant_any",
+]
+for o in outcomes:
     m = Measure(
-        id="{}_rate".format(d),
+        id="{}_rate".format(o),
+        numerator=o,
+        denominator="population",
+        group_by=["practice"],
+    )
+    measures.append(m)
+    new_m = Measure(
+        id="new_{}_rate".format(o),
+        numerator="new_{}".format(o),
+        denominator="population",
+        group_by=["practice"],
+    )
+    measures.append(new_m)
+for d in demographics:
+    # QOF achievement
+    m = Measure(
+        id="qof_{}_rate".format(d),
         numerator="numerator",
         denominator="denominator",
         group_by=[d],
     )
     measures.append(m)
+    for o in outcomes:
+        m = Measure(
+            id="{}_{}_rate".format(o, d),
+            numerator=o,
+            denominator="population",
+            group_by=[d],
+        )
+        measures.append(m)
+        new_m = Measure(
+            id="new_{}_{}_rate".format(o, d),
+            numerator="new_{}".format(o),
+            denominator="population",
+            group_by=[d],
+        )
+        measures.append(new_m)
