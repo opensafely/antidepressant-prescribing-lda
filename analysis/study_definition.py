@@ -300,6 +300,11 @@ study = StudyDefinition(
     ),
 )
 
+# TODO: Small number suppression may be overly stringent for decile chart production
+# See: https://github.com/opensafely-core/cohort-extractor/issues/759
+# When running, we should check how much is redacted
+# Using tested code now rather than custom decile chart redaction code
+
 # --- DEFINE MEASURES ---
 measures = [
     # QOF achievement by practice
@@ -308,6 +313,7 @@ measures = [
         numerator="numerator",
         denominator="denominator",
         group_by=["practice"],
+        small_number_suppression=True,
     ),
 ]
 outcomes = [
@@ -320,17 +326,19 @@ outcomes = [
 ]
 for o in outcomes:
     m = Measure(
-        id="{}_rate".format(o),
+        id="{}_practice_rate".format(o),
         numerator=o,
         denominator="population",
         group_by=["practice"],
+        small_number_suppression=True,
     )
     measures.append(m)
     new_m = Measure(
-        id="new_{}_rate".format(o),
+        id="new_{}_practice_rate".format(o),
         numerator="new_{}".format(o),
         denominator="population",
         group_by=["practice"],
+        small_number_suppression=True,
     )
     measures.append(new_m)
 for d in demographics:
@@ -340,6 +348,7 @@ for d in demographics:
         numerator="numerator",
         denominator="denominator",
         group_by=[d],
+        small_number_suppression=True,
     )
     measures.append(m)
     for o in outcomes:
@@ -348,6 +357,7 @@ for d in demographics:
             numerator=o,
             denominator="population",
             group_by=[d],
+            small_number_suppression=True,
         )
         measures.append(m)
         new_m = Measure(
@@ -355,5 +365,6 @@ for d in demographics:
             numerator="new_{}".format(o),
             denominator="population",
             group_by=[d],
+            small_number_suppression=True,
         )
         measures.append(new_m)

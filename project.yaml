@@ -5,6 +5,8 @@ expectations:
 
 actions:
 
+  # TODO: switch statement for which stud(y/ies) to run?
+
   ####################
   # Cohort Generation
   ####################
@@ -85,3 +87,9 @@ actions:
   #############################
   # TODO: actions for plotting 
   #############################
+  create_deciles:
+    run: python:latest python analysis/create_deciles.py
+    needs: [generate_measures, generate_measures_qof]
+    outputs:
+      highly_sensitive:
+        cohort: output/*/decile*.png

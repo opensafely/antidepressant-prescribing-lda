@@ -66,6 +66,11 @@ study = StudyDefinition(
     **demographic_variables
 )
 
+# TODO: Small number suppression may be overly stringent for decile chart production
+# See: https://github.com/opensafely-core/cohort-extractor/issues/759
+# When running, we should check how much is redacted
+# Using tested code now rather than custom decile chart redaction code
+
 # --- DEFINE MEASURES ---
 measures = [
     # QOF achievement by practice
@@ -74,6 +79,7 @@ measures = [
         numerator="numerator",
         denominator="denominator",
         group_by=["practice"],
+        small_number_suppression=True,
     ),
 ]
 # QOF achievement by each demographic in the config file
@@ -83,5 +89,6 @@ for d in demographics:
         numerator="numerator",
         denominator="denominator",
         group_by=[d],
+        small_number_suppression=True,
     )
     measures.append(m)
