@@ -108,7 +108,7 @@ actions:
             deciles-charts:v0.0.1
             --input_dir output/qof/joined
             --output_dir output/qof/joined
-    needs: [generate_measures_prevalence, generate_measures, generate_measures_qof]
+    needs: [generate_measures_prevalence, generate_measures_qof]
     outputs:
       moderately_sensitive:
         cohort: output/qof/joined/deciles_chart_*.png
@@ -118,7 +118,27 @@ actions:
             deciles-charts:v0.0.1
             --input_dir output/lda/joined
             --output_dir output/lda/joined
-    needs: [generate_measures_prevalence, generate_measures, generate_measures_qof]
+    needs: [generate_measures]
     outputs:
       moderately_sensitive:
         cohort: output/lda/joined/deciles_chart_*.png
+
+  generate_qof_groups:
+    run: >
+            python:latest analysis/group_charts.py
+            --input_dir output/qof/joined
+            --output_dir output/qof/joined
+    needs: [generate_measures_qof]
+    outputs:
+      moderately_sensitive:
+        cohort: output/qof/joined/group_chart_*.png
+
+  generate_lda_groups:
+    run: >
+            python:latest analysis/group_charts.py
+            --input_dir output/lda/joined
+            --output_dir output/lda/joined
+    needs: [generate_measures]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/joined/group_chart_*.png
