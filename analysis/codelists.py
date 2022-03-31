@@ -10,7 +10,7 @@
 # --- IMPORT STATEMENTS ---
 
 ## Import code building blocks from cohort extractor package
-from cohortextractor import codelist, codelist_from_csv, combine_codelists
+from cohortextractor import codelist, codelist_from_csv
 
 
 # --- CODELISTS ---
@@ -102,16 +102,11 @@ depression_review_dissent_codes = codelist_from_csv(
 ## Variables
 
 ### Ethnicity
-ethnicity_codes_6 = codelist_from_csv(
-    "codelists/primis-covid19-vacc-uptake-eth2001.csv",
-    system="snomed",
-    column="code",
-    category_column="grouping_6_id",
-)
-
+# TODO: switch to snomed once codelist is ready
+# Not running on EMIS, and this codelist has less missingness than primis
 ethnicity_codes_16 = codelist_from_csv(
-    "codelists/primis-covid19-vacc-uptake-eth2001.csv",
-    system="snomed",
-    column="code",
-    category_column="grouping_16_id",
+    "codelists/opensafely-ethnicity.csv",
+    system="ctv3",
+    column="Code",
+    category_column="Grouping_16",
 )
