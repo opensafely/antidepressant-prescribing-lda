@@ -12,6 +12,12 @@
       "downloaded_at": "2022-01-28 12:03:04.648927Z",
       "sha": "5e1a00fd89401955f0ebd09af105cf9748dbcc73"
     },
+    "nhsd-primary-care-domain-refsets-carehome_cod.csv": {
+      "id": "nhsd-primary-care-domain-refsets/carehome_cod/5d2f363a",
+      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/carehome_cod/5d2f363a/",
+      "downloaded_at": "2022-03-31 17:28:31.331051Z",
+      "sha": "11a75f8c271f6cd05276f49b038fbda8dfab77fe"
+    },
     "nhsd-primary-care-domain-refsets-depr_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/depr_cod/20210127",
       "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/depr_cod/20210127/",
@@ -41,12 +47,6 @@
       "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprpcadec_cod/20200812/",
       "downloaded_at": "2022-02-07 09:39:28.893268Z",
       "sha": "48dfee6f515e12f4745e5c69502e8675db0fc1c9"
-    },
-    "primis-covid19-vacc-uptake-longres.csv": {
-      "id": "primis-covid19-vacc-uptake/longres/v1",
-      "url": "https://codelists.opensafely.org/codelist/primis-covid19-vacc-uptake/longres/v1/",
-      "downloaded_at": "2022-02-03 18:17:46.297084Z",
-      "sha": "4d4c94b9c6aa267c6a60657150bbc5ec7d2d7625"
     },
     "opensafely-ethnicity.csv": {
       "id": "opensafely/ethnicity/746e4c98",

@@ -7,9 +7,10 @@
 ####################################################################
 
 from cohortextractor import patients
+from codelists import learning_disability_codes, carehome_codes
 
-# Age
 demographic_variables = dict(
+    # Age
     age=patients.age_as_of(
         "index_date",
         return_expectations={
@@ -72,6 +73,54 @@ demographic_variables = dict(
                     "South East": 0.1,
                     "South West": 0.1,
                 },
+            },
+        },
+    ),
+    # Learning disability
+    learning_disability=patients.categorised_as(
+        {
+            "Unknown": "DEFAULT",
+            "No learning disability": "ld='0'",
+            "Learning disability": "ld='1'",
+        },
+        ld=patients.with_these_clinical_events(
+            learning_disability_codes,
+            on_or_before="index_date",
+            returning="binary_flag",
+            return_expectations={"incidence": 0.2},
+        ),
+        return_expectations={
+            "rate": "universal",
+            "category": {
+                "ratios": {
+                    "No learning disability": 0.8,
+                    "Learning disability": 0.1,
+                    "Unknown": 0.1,
+                }
+            },
+        },
+    ),
+    # Care home
+    carehome=patients.categorised_as(
+        {
+            "Unknown": "DEFAULT",
+            "Not in carehome": "ch='0'",
+            "Carehome": "ch='1'",
+        },
+        ch=patients.with_these_clinical_events(
+            carehome_codes,
+            on_or_before="index_date",
+            returning="binary_flag",
+            return_expectations={"incidence": 0.2},
+        ),
+        return_expectations={
+            "rate": "universal",
+            "category": {
+                "ratios": {
+                    "Unknown": 0.1,
+                    "Not in carehome": 0.8,
+                    "Carehome": 0.1,
+                }
             },
         },
     ),

@@ -21,9 +21,7 @@ from codelists import (
     tricyclic_codes,
     maoi_codes,
     other_antidepressant_codes,
-    learning_disability_codes,
     autism_codes,
-    carehome_primis_codes,
     depression_codes,
     depression_resolved_codes,
     depression_review_codes,
@@ -65,13 +63,7 @@ study = StudyDefinition(
             registered_at_start=patients.registered_as_of("index_date"),
         ),
         # Groups
-        # Learning disabilities
-        learning_disability=patients.with_these_clinical_events(
-            learning_disability_codes,
-            on_or_before="index_date",
-            returning="binary_flag",
-            return_expectations={"incidence": 0.2},
-        ),
+        # Learning disabilities already in demographic vars
         # Autism
         autism=patients.with_these_clinical_events(
             autism_codes,
@@ -84,14 +76,6 @@ study = StudyDefinition(
     **demographic_variables,
     # QOF DEP003
     **dep003_variables,
-    # Other subgroups
-    # Care home
-    care_home=patients.with_these_clinical_events(
-        carehome_primis_codes,
-        on_or_before="index_date",
-        returning="binary_flag",
-        return_expectations={"incidence": 0.2},
-    ),
     # TODO: Look into a way to loop the creation of these variables
     # Depression
     depression=patients.satisfying(

@@ -57,20 +57,20 @@ autism_codes = codelist_from_csv(
 )
 
 ### Care homes
-carehome_primis_codes = codelist_from_csv(
-    "codelists/primis-covid19-vacc-uptake-longres.csv",
+carehome_codes = codelist_from_csv(
+    "codelists/nhsd-primary-care-domain-refsets-carehome_cod.csv",
     system="snomed",
     column="code",
 )
 
-### depression
+### Depression
 depression_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-depr_cod.csv",
     system="snomed",
     column="code",
 )
 
-### depression resolved
+### Depression resolved
 depression_resolved_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-depres_cod.csv",
     system="snomed",
