@@ -27,7 +27,12 @@ from codelists import (
 # NOTE: I do not like that the imported variable names are opaque
 # but the study definition requires a dictionary
 from demographic_variables import demographic_variables
-from dep003_variables import dep003_variables
+
+from depression_variables import (
+    depression_register_variables,
+    depression_indicator_variables,
+)
+
 
 from config import start_date, end_date, codelist_path, demographics
 
@@ -40,28 +45,24 @@ study = StudyDefinition(
         "rate": "uniform",
         "incidence": 0.1,
     },
-    # Define the study population
-    # Number of patients who have a current diagnosis of depression (exclude those with a depression resolved code)
-    # TODO: should these index_dates be in reference to nhs financial year?
     population=patients.satisfying(
         """
-        # Define general population parameters
-        registered AND 
+        depression_register AND
+        age>=18
+
+        # Extra OpenSafely population parameters
         (NOT has_died) AND
         (sex = "M" OR sex = "F") AND
-        depression_register
         """,
         has_died=patients.died_from_any_cause(
             on_or_before="index_date",
             returning="binary_flag",
             return_expectations={"incidence": 0.1},
         ),
-        registered=patients.registered_as_of(
-            "index_date", return_expectations={"incidence": 0.9}
-        ),
     ),
     # QOF variables
-    **dep003_variables,
+    **depression_register_variables,
+    **depression_indicator_variables,
     # Demographic variables
     **demographic_variables
 )
@@ -76,8 +77,8 @@ measures = [
     # QOF achievement by practice
     Measure(
         id="qof_practice_rate",
-        numerator="numerator",
-        denominator="denominator",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
         group_by=["practice"],
         small_number_suppression=True,
     ),
@@ -86,8 +87,8 @@ measures = [
 for d in demographics:
     m = Measure(
         id="qof_{}_rate".format(d),
-        numerator="numerator",
-        denominator="denominator",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
         group_by=[d],
         small_number_suppression=True,
     )

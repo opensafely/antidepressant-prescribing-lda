@@ -36,6 +36,12 @@
       "downloaded_at": "2022-01-28 12:03:05.286304Z",
       "sha": "e63962fbaf4822cc4182331859656d55e1214b02"
     },
+    "nhsd-primary-care-domain-refsets-deprinvite_cod.csv": {
+      "id": "nhsd-primary-care-domain-refsets/deprinvite_cod/20200812",
+      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprinvite_cod/20200812/",
+      "downloaded_at": "2022-04-01 10:06:02.101172Z",
+      "sha": "d2528be7c514a7f60d9a702311df9c84b34e7a7d"
+    },
     "nhsd-primary-care-domain-refsets-deprpcapu_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812",
       "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812/",

@@ -14,7 +14,8 @@ from cohortextractor import StudyDefinition, patients, Measure
 from config import start_date, end_date
 
 from demographic_variables import *
-from dep003_variables import *
+from depression_variables import depression_register_variables
+
 
 # Define study population and variables
 study = StudyDefinition(
@@ -28,10 +29,11 @@ study = StudyDefinition(
     # Define the study population
     population=patients.satisfying(
         """
-        NOT has_died
-        AND
-        registered
-        AND
+        # Depression patient list
+        age>=18 AND
+
+	# Extra OpenSafely parameters
+        NOT has_died AND 
         (sex = "M" OR sex = "F")
         """,
         has_died=patients.died_from_any_cause(
@@ -43,11 +45,10 @@ study = StudyDefinition(
             registered_at_start=patients.registered_as_of("index_date"),
         ),
     ),
+    **depression_register_variables,
     **{
         "sex": demographic_variables["sex"],
-        "practice": demographic_variables["practice"],
-        "age_financial_year": dep003_variables["age_financial_year"],
-        "depression_register": dep003_variables["depression_register"],
+        "age": demographic_variables["age"],
     },
 )
 

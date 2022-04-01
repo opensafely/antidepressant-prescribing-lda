@@ -10,13 +10,44 @@ from cohortextractor import patients
 from codelists import learning_disability_codes, carehome_codes
 
 demographic_variables = dict(
-    # Age
+    # Age as of the end of the month
+    # OS round dob to the first of the month, so add an extra day
+    # https://docs.opensafely.org/study-def-variables/#cohortextractor.patients.age_as_of
     age=patients.age_as_of(
-        "index_date",
+        "last_day_of_month(index_date) + 1 day",
         return_expectations={
             "rate": "universal",
             "int": {"distribution": "population_ages"},
             "incidence": 0.001,
+        },
+    ),
+    age_band=patients.categorised_as(
+        {
+            "Unknown": "DEFAULT",
+            "0-19": """ age >= 0 AND age < 20""",
+            "20-29": """ age >=  20 AND age < 30""",
+            "30-39": """ age >=  30 AND age < 40""",
+            "40-49": """ age >=  40 AND age < 50""",
+            "50-59": """ age >=  50 AND age < 60""",
+            "60-69": """ age >=  60 AND age < 70""",
+            "70-79": """ age >=  70 AND age < 80""",
+            "80+": """ age >=  80 AND age <= 120""",
+        },
+        return_expectations={
+            "rate": "universal",
+            "category": {
+                "ratios": {
+                    "Unknown": 0.005,
+                    "0-19": 0.125,
+                    "20-29": 0.125,
+                    "30-39": 0.125,
+                    "40-49": 0.125,
+                    "50-59": 0.125,
+                    "60-69": 0.125,
+                    "70-79": 0.125,
+                    "80+": 0.12,
+                }
+            },
         },
     ),
     # Sex

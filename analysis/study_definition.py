@@ -30,8 +30,6 @@ from config import start_date, end_date, codelist_path, demographics
 
 from demographic_variables import demographic_variables
 
-from dep003_variables import dep003_variables
-
 # Define study population and variables
 study = StudyDefinition(
     index_date=start_date,
@@ -50,7 +48,7 @@ study = StudyDefinition(
         AND
         (sex = "M" OR sex = "F")
         AND
-        (age >=0 AND age < 110)
+        (age >=0 AND age < 120)
         AND
         (learning_disability OR autism)
         """,
@@ -75,8 +73,7 @@ study = StudyDefinition(
     # Common demographic variables
     **demographic_variables,
     # QOF DEP003
-    **dep003_variables,
-    # TODO: Look into a way to loop the creation of these variables
+    # TODO: Re-add in QOF
     # Depression
     depression=patients.satisfying(
         """

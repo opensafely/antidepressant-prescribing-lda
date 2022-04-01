@@ -1,7 +1,6 @@
 #####################################################################
 
 # Reusable DEP003 QOF variables
-# * Age financial year
 # * Relevant QOF register
 # * Indicator denominator and numerator
 
@@ -18,25 +17,18 @@ from codelists import (
     depression_review_codes,
     depression_review_unsuitable_codes,
     depression_review_dissent_codes,
+    depression_invitation_codes,
 )
 
 from config import start_date, depr_register_date
 
 dep003_variables = dict(
-    # Age as of end of NHS financial year (March 31st)
-    age_financial_year=patients.age_as_of(
-        "last_day_of_nhs_financial_year(index_date) + 1 day",
-        return_expectations={
-            "rate": "universal",
-            "int": {"distribution": "population_ages"},
-            "incidence": 0.001,
-        },
-    ),
+    # TODO: add age back in: age >= 18 AND age <110
+    # TODO: move composition of variables?
     depression_register=patients.satisfying(
         """
         depression_since_register_date AND
-        NOT depression_register_resolved AND
-        age_financial_year >= 18 AND age_financial_year <110
+        NOT depression_register_resolved
         """,
         depression_since_register_date=patients.with_these_clinical_events(
             codelist=depression_codes,
@@ -90,6 +82,40 @@ dep003_variables = dict(
                 "last_day_of_month(index_date)",
             ],
         ),
+    ),
+    # Latest depression invite date
+    depr_invite_2=patients.with_these_clinical_events(
+        codelist=depression_invitation_codes,
+        returning="binary_flag",
+        find_last_match_in_period=True,
+        between=[
+            "first_day_of_month(index_date) - 11 months",
+            "last_day_of_month(index_date)",
+        ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+    ),
+    # Latest depression invite date 7 days before the last one
+    # TODO: do we actually need the date for the first invite?
+    depr_invite_1=patients.with_these_clinical_events(
+        codelist=depression_invitation_codes,
+        returning="binary_flag",
+        find_last_match_in_period=True,
+        between=[
+            "first_day_of_month(index_date) - 11 months",
+            "depr_invite_2_date - 7 days",
+        ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+    ),
+    # TODO: how do we define "not responded"
+    # They do not have a review and not dissent and not unsuitable?
+    # Would have already rejected those people?
+    # TODO: could handle the 7 days in here?
+    dep003_denominator_6=patients.satisfying(
+        """
+        depr_invite_1 AND depr_invite_2
+        """,
     ),
     numerator=patients.satisfying(
         """

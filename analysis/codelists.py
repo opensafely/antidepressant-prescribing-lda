@@ -99,6 +99,13 @@ depression_review_dissent_codes = codelist_from_csv(
 )
 
 
+### Depression review invitation
+depression_invitation_codes = codelist_from_csv(
+    "codelists/nhsd-primary-care-domain-refsets-deprinvite_cod.csv",
+    system="snomed",
+    column="code",
+)
+
 ## Variables
 
 ### Ethnicity
