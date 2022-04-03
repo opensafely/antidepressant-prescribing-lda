@@ -30,7 +30,8 @@ study = StudyDefinition(
     population=patients.satisfying(
         """
         # Depression patient list
-        age>=18 AND
+        age_qof>=18 AND
+        age_band_qof != "Unknown" AND
 
 	# Extra OpenSafely parameters
         NOT has_died AND 
@@ -48,7 +49,6 @@ study = StudyDefinition(
     **depression_register_variables,
     **{
         "sex": demographic_variables["sex"],
-        "age": demographic_variables["age"],
     },
 )
 
@@ -59,5 +59,6 @@ measures = [
         numerator="depression_register",
         denominator="population",
         group_by=["population"],
+        small_number_suppression=True,
     ),
 ]

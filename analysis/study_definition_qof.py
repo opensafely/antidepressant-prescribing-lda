@@ -28,10 +28,7 @@ from codelists import (
 # but the study definition requires a dictionary
 from demographic_variables import demographic_variables
 
-from depression_variables import (
-    depression_register_variables,
-    depression_indicator_variables,
-)
+from depression_variables import depression_register_variables, dep003_variables
 
 
 from config import start_date, end_date, codelist_path, demographics
@@ -48,11 +45,10 @@ study = StudyDefinition(
     population=patients.satisfying(
         """
         depression_register AND
-        age>=18
 
         # Extra OpenSafely population parameters
         (NOT has_died) AND
-        (sex = "M" OR sex = "F") AND
+        (sex = "M" OR sex = "F")
         """,
         has_died=patients.died_from_any_cause(
             on_or_before="index_date",
@@ -62,7 +58,7 @@ study = StudyDefinition(
     ),
     # QOF variables
     **depression_register_variables,
-    **depression_indicator_variables,
+    **dep003_variables,
     # Demographic variables
     **demographic_variables
 )

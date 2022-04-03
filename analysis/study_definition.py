@@ -29,6 +29,7 @@ from codelists import (
 from config import start_date, end_date, codelist_path, demographics
 
 from demographic_variables import demographic_variables
+from depression_variables import depression_register_variables, dep003_variables
 
 # Define study population and variables
 study = StudyDefinition(
@@ -40,6 +41,7 @@ study = StudyDefinition(
         "incidence": 0.1,
     },
     # Define the study population
+    # TODO: should this use age at the end of the month (qof), or at start?
     population=patients.satisfying(
         """
         NOT has_died
@@ -73,7 +75,8 @@ study = StudyDefinition(
     # Common demographic variables
     **demographic_variables,
     # QOF DEP003
-    # TODO: Re-add in QOF
+    **depression_register_variables,
+    **dep003_variables,
     # Depression
     depression=patients.satisfying(
         """
@@ -291,8 +294,8 @@ measures = [
     # QOF achievement by practice
     Measure(
         id="qof_practice_rate",
-        numerator="numerator",
-        denominator="denominator",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
         group_by=["practice"],
         small_number_suppression=True,
     ),
@@ -326,8 +329,8 @@ for d in demographics:
     # QOF achievement
     m = Measure(
         id="qof_{}_rate".format(d),
-        numerator="numerator",
-        denominator="denominator",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
         group_by=[d],
         small_number_suppression=True,
     )
