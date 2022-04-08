@@ -45,18 +45,18 @@ def drop_zero_denominator_rows(measure_table):
     return measure_table[mask].reset_index(drop=True)
 
 
-def get_group_chart(measure_table, date_label=None, date_lines=None):
+def get_group_chart(measure_table, date_lines=None):
     # TODO: do not hard code date and value
     plt.figure()
     measure_table.set_index("date", inplace=True)
     try:
         measure_table.groupby(measure_table.attrs["group_by"]).value.plot(legend=True)
+        plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left", fontsize="small")
     except ValueError:
         # No group_by attribute
         measure_table.value.plot(legend=None)
     if date_lines:
-        add_date_lines(plt, date_label, date_lines)
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left", fontsize="small")
+        add_date_lines(plt, date_lines)
     plt.tight_layout()
     return plt
 
@@ -65,13 +65,11 @@ def write_group_chart(group_chart, path):
     group_chart.savefig(path)
 
 
-def add_date_lines(plt, label, vlines):
+def add_date_lines(plt, vlines):
     # TODO: Check that it is within the range?
     for date in vlines:
         try:
-            plt.axvline(
-                x=pandas.to_datetime(date), color="orange", ls="--", label=label
-            )
+            plt.axvline(x=pandas.to_datetime(date), color="orange", ls="--")
         except parser._parser.ParserError:
             # TODO: add logger and print warning on exception
             # Skip any dates not in the correct format
@@ -93,10 +91,6 @@ def parse_args():
         help="Path to the output directory",
     )
     parser.add_argument(
-        "--date_label",
-        help="Legend label for date lines",
-    )
-    parser.add_argument(
         "--date_lines",
         nargs="+",
         help="Vertical date lines",
@@ -108,14 +102,11 @@ def main():
     args = parse_args()
     input_dir = args.input_dir
     output_dir = args.output_dir
-    date_label = args.date_label
     date_lines = args.date_lines
 
     for measure_table in get_measure_tables(input_dir):
         measure_table = drop_zero_denominator_rows(measure_table)
-        chart = get_group_chart(
-            measure_table, date_lines=date_lines, date_label=date_label
-        )
+        chart = get_group_chart(measure_table, date_lines=date_lines)
         id_ = measure_table.attrs["id"]
         fname = f"group_chart_{id_}.png"
         write_group_chart(chart, output_dir / fname)
