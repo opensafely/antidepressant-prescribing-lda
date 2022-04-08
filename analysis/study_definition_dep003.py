@@ -42,25 +42,19 @@ study = StudyDefinition(
         "rate": "uniform",
         "incidence": 0.1,
     },
+    # TODO: determine whether we want the sex exclusion
+    # TODO: could immediately restrict this to dep003_denominator
     population=patients.satisfying(
         """
-        depression_register AND
-
-        # Extra OpenSafely population parameters
-        (NOT has_died) AND
-        (sex = "M" OR sex = "F")
+        (sex = "M" OR sex = "F") AND
+        depression_register
         """,
-        has_died=patients.died_from_any_cause(
-            on_or_before="index_date",
-            returning="binary_flag",
-            return_expectations={"incidence": 0.1},
-        ),
     ),
+    # Demographic variables
+    **demographic_variables,
     # QOF variables
     **depression_register_variables,
-    **dep003_variables,
-    # Demographic variables
-    **demographic_variables
+    **dep003_variables
 )
 
 # TODO: Small number suppression may be overly stringent for decile chart production
@@ -70,9 +64,17 @@ study = StudyDefinition(
 
 # --- DEFINE MEASURES ---
 measures = [
+    # QOF achievement over the population (same as denominator)
+    Measure(
+        id="dep003_total_rate",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
+        group_by=["population"],
+        small_number_suppression=True,
+    ),
     # QOF achievement by practice
     Measure(
-        id="qof_practice_rate",
+        id="dep003_practice_rate",
         numerator="dep003_numerator",
         denominator="dep003_denominator",
         group_by=["practice"],
@@ -82,7 +84,7 @@ measures = [
 # QOF achievement by each demographic in the config file
 for d in demographics:
     m = Measure(
-        id="qof_{}_rate".format(d),
+        id="dep003_{}_rate".format(d),
         numerator="dep003_numerator",
         denominator="dep003_denominator",
         group_by=[d],

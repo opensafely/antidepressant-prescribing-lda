@@ -8,7 +8,18 @@ end_date = "2022-01-01"
 depr_register_date = "2006-04-01"
 
 # demographic variables by which code use is broken down
-demographics = ["sex", "region", "carehome", "learning_disability", "imd", "ethnicity"]
+demographics = [
+    "age_band",
+    "sex",
+    "region",
+    "carehome",
+    "ld",
+    "imd",
+    "ethnicity",
+]
+
+# subgroups for LDA population plots
+lda_measures = ["carehome", "ld", "autism"]
 
 # name of measure
 marker = "Depression review"

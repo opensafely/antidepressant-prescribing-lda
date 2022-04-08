@@ -21,12 +21,11 @@ from codelists import (
     tricyclic_codes,
     maoi_codes,
     other_antidepressant_codes,
-    autism_codes,
     depression_codes,
     depression_resolved_codes,
     depression_review_codes,
 )
-from config import start_date, end_date, codelist_path, demographics
+from config import start_date, end_date, codelist_path, demographics, lda_measures
 
 from demographic_variables import demographic_variables
 from depression_variables import depression_register_variables, dep003_variables
@@ -41,36 +40,15 @@ study = StudyDefinition(
         "incidence": 0.1,
     },
     # Define the study population
-    # TODO: should this use age at the end of the month (qof), or at start?
+    # TODO: determine whether we want the sex exclusion
     population=patients.satisfying(
         """
-        NOT has_died
-        AND
-        registered
-        AND
-        (sex = "M" OR sex = "F")
-        AND
-        (age >=0 AND age < 120)
-        AND
-        (learning_disability OR autism)
+        gms_registration_status AND
+        age_band != "Unknown" AND
+        (sex = "M" OR sex = "F") AND
+        (ld OR autism)
         """,
-        has_died=patients.died_from_any_cause(
-            on_or_before="index_date",
-            returning="binary_flag",
-        ),
-        registered=patients.satisfying(
-            "registered_at_start",
-            registered_at_start=patients.registered_as_of("index_date"),
-        ),
-        # Groups
         # Learning disabilities already in demographic vars
-        # Autism
-        autism=patients.with_these_clinical_events(
-            autism_codes,
-            on_or_before="index_date",
-            returning="binary_flag",
-            return_expectations={"incidence": 0.3},
-        ),
     ),
     # Common demographic variables
     **demographic_variables,
@@ -291,14 +269,16 @@ study = StudyDefinition(
 
 # --- DEFINE MEASURES ---
 measures = [
-    # QOF achievement by practice
+    # QOF achievement over the population
+    # This will be restricted to the 18+ population
     Measure(
-        id="qof_practice_rate",
+        id="dep003_total_rate",
         numerator="dep003_numerator",
         denominator="dep003_denominator",
-        group_by=["practice"],
+        group_by=["population"],
         small_number_suppression=True,
     ),
+    # TODO: do we also want QOF achievement by practice for deciles?
 ]
 outcomes = [
     "depression",
@@ -309,46 +289,39 @@ outcomes = [
     "antidepressant_any",
 ]
 for o in outcomes:
+    # Total population rate by outcome
     m = Measure(
-        id="{}_practice_rate".format(o),
+        id="{}_total_rate".format(o),
         numerator=o,
         denominator="population",
-        group_by=["practice"],
+        group_by=["population"],
         small_number_suppression=True,
     )
     measures.append(m)
     new_m = Measure(
-        id="new_{}_practice_rate".format(o),
+        id="new_{}_total_rate".format(o),
         numerator="new_{}".format(o),
         denominator="population",
-        group_by=["practice"],
+        group_by=["population"],
         small_number_suppression=True,
     )
     measures.append(new_m)
-for d in demographics:
-    # QOF achievement
-    m = Measure(
-        id="qof_{}_rate".format(d),
-        numerator="dep003_numerator",
-        denominator="dep003_denominator",
-        group_by=[d],
-        small_number_suppression=True,
-    )
-    measures.append(m)
-    for o in outcomes:
+
+    # Group rate by outcome
+    for group in lda_measures:
         m = Measure(
-            id="{}_{}_rate".format(o, d),
+            id="{}_{}_rate".format(o, group),
             numerator=o,
-            denominator="population",
-            group_by=[d],
+            denominator=group,
+            group_by=["population"],
             small_number_suppression=True,
         )
         measures.append(m)
         new_m = Measure(
-            id="new_{}_{}_rate".format(o, d),
+            id="new_{}_{}_rate".format(o, group),
             numerator="new_{}".format(o),
-            denominator="population",
-            group_by=[d],
+            denominator=group,
+            group_by=["population"],
             small_number_suppression=True,
         )
         measures.append(new_m)

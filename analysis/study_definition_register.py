@@ -11,9 +11,9 @@
 # Import code building blocks from cohort extractor package
 from cohortextractor import StudyDefinition, patients, Measure
 
-from config import start_date, end_date
+from config import start_date, end_date, demographics
 
-from demographic_variables import *
+from demographic_variables import demographic_variables
 from depression_variables import depression_register_variables
 
 
@@ -27,38 +27,42 @@ study = StudyDefinition(
         "incidence": 0.1,
     },
     # Define the study population
+    # TODO: determine whether we want the sex exclusion
     population=patients.satisfying(
         """
+        (sex = "M" OR sex = "F") AND
         # Depression patient list
-        age_qof>=18 AND
-        age_band_qof != "Unknown" AND
-
-	# Extra OpenSafely parameters
-        NOT has_died AND 
-        (sex = "M" OR sex = "F")
+        depression_list_size
         """,
-        has_died=patients.died_from_any_cause(
-            on_or_before="index_date",
-            returning="binary_flag",
-        ),
-        registered=patients.satisfying(
-            "registered_at_start",
-            registered_at_start=patients.registered_as_of("index_date"),
-        ),
     ),
+    **demographic_variables,
     **depression_register_variables,
-    **{
-        "sex": demographic_variables["sex"],
-    },
 )
 
 # --- DEFINE MEASURES ---
 measures = [
     Measure(
-        id="prevalence_rate",
+        id="register_total_rate",
         numerator="depression_register",
         denominator="population",
         group_by=["population"],
         small_number_suppression=True,
     ),
+    Measure(
+        id="register_practice_rate",
+        numerator="depression_register",
+        denominator="population",
+        group_by=["practice"],
+        small_number_suppression=True,
+    ),
 ]
+# Register prevalence by each demographic in the config file
+for d in demographics:
+    m = Measure(
+        id="register_{}_rate".format(d),
+        numerator="depression_register",
+        denominator="population",
+        group_by=[d],
+        small_number_suppression=True,
+    )
+    measures.append(m)

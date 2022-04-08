@@ -23,61 +23,26 @@ from codelists import (
 from config import start_date, depr_register_date
 
 depression_register_variables = dict(
-    # The most recent date that the patient registered for GMS, where this registration occurred on or before the achievement date.
-    # Define depression register
-    # If DEPR_DAT >= 01/04/2006 (defined in config.py)
-    # AND DEPRES_DAT = Null
-    # AND PAT_AGE >= 18 (defined in demographic_variables.py, handled in study definition)
-    # TODO: should age/age_band be top level (sharable), or hidden?
-    age_qof=patients.age_as_of(
-        "last_day_of_month(index_date) + 1 day",
-        return_expectations={
-            "rate": "universal",
-            "int": {"distribution": "population_ages"},
-            "incidence": 0.001,
-        },
-    ),
-    age_band_qof=patients.categorised_as(
-        {
-            "Unknown": "DEFAULT",
-            "0-19": """ age_qof >= 0 AND age_qof < 20""",
-            "20-29": """ age_qof >=  20 AND age_qof < 30""",
-            "30-39": """ age_qof >=  30 AND age_qof < 40""",
-            "40-49": """ age_qof >=  40 AND age_qof < 50""",
-            "50-59": """ age_qof >=  50 AND age_qof < 60""",
-            "60-69": """ age_qof >=  60 AND age_qof < 70""",
-            "70-79": """ age_qof >=  70 AND age_qof < 80""",
-            "80+": """ age_qof >=  80 AND age_qof <= 120""",
-        },
-        return_expectations={
-            "rate": "universal",
-            "category": {
-                "ratios": {
-                    "Unknown": 0.005,
-                    "0-19": 0.125,
-                    "20-29": 0.125,
-                    "30-39": 0.125,
-                    "40-49": 0.125,
-                    "50-59": 0.125,
-                    "60-69": 0.125,
-                    "70-79": 0.125,
-                    "80+": 0.12,
-                }
-            },
-        },
+    # Depression register:  Patients aged at least 18 years old whose latest
+    # unresolved episode of depression is since 1st April 2006
+    # NOTE: dependency on age and gms_registration_status from demographic_variables.py
+    # Demographic variables MUST be loaded before this dictionary in the study
+    # If demographics dict is not also going to be loaded, the individual
+    # variables should also be loaded into the study definition
+    depression_list_size=patients.satisfying(
+        """
+        gms_registration_status AND
+        age>=18 AND
+        # Excludes those with unknown age or above 120 (unrealistic)
+        age_band != "Unknown"
+        """,
     ),
     depression_register=patients.satisfying(
         """
-        currently_registered AND
+        depression_list_size AND
         ((depression_for_register AND (NOT depression_resolved_register)) OR
-        (depression_resolved_register_date <= depression_for_register_date)) AND
-        age_qof>=18 AND
-        age_band_qof != "Unknown"
+        (depression_resolved_register_date <= depression_for_register_date))
         """,
-        currently_registered=patients.registered_as_of(
-            "index_date",
-            return_expectations={"incidence": 0.9},
-        ),
         # Date of the latest first or new episode of depression up to and including the achievement date.
         depression_for_register=patients.with_these_clinical_events(
             between=[
@@ -195,8 +160,8 @@ depression_indicator_variables = dict(
     # leading up to and including the payment period end date.
     # Select the remaining patients.
     registered_3mo=patients.registered_with_one_practice_between(
-        start_date="index_date - 3 months",
-        end_date="index_date",
+        start_date="first_day_of_month(index_date) - 2 months",
+        end_date="last_day_of_month(index_date)",
         return_expectations={"incidence": 0.1},
     ),
 )
@@ -262,11 +227,13 @@ dep003_variables = dict(
             NOT registered_3mo
             """,
         ),
+        return_expectations={"incidence": 0.8}
     ),
     dep003_numerator=patients.satisfying(
         """
         dep003_denominator AND 
         dep003_denominator_r3
         """,
+        return_expectations={"incidence": 0.6},
     ),
 )
