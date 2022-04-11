@@ -104,9 +104,9 @@ actions:
   #############################
   generate_qof_deciles_charts:
     run: >
-            deciles-charts:v0.0.1
-            --input_dir output/qof/joined
-            --output_dir output/qof/joined
+            deciles-charts:v0.0.8
+            --input-dir output/qof/joined
+            --output-dir output/qof/joined
     needs: [generate_measures_register, generate_measures_dep003]
     outputs:
       moderately_sensitive:
@@ -115,24 +115,31 @@ actions:
   generate_qof_groups:
     run: >
             python:latest analysis/group_charts.py
-            --input_dir output/qof/joined
-            --output_dir output/qof/joined
-            --date_label "NHS Financial Year"
-            --date_lines "2020-03-31"
-            --date_lines "2021-03-31"
+            --input-dir output/qof/joined
+            --output-dir output/qof/joined
+            --date-lines "2020-03-31" "2021-03-31"
     needs: [generate_measures_register, generate_measures_dep003]
     outputs:
       moderately_sensitive:
         cohort: output/qof/joined/group_chart_*.png
 
+  generate_lda_table1:
+    run: >
+            python:latest analysis/table1.py
+            --input-dir output/lda/joined
+            --output-dir output/lda/joined
+            --measure-attribute "antidepressant_any"
+    needs: [generate_measures]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/joined/table1.csv
+
   generate_lda_groups:
     run: >
             python:latest analysis/group_charts.py
-            --input_dir output/lda/joined
-            --output_dir output/lda/joined
-            --date_label "Lockdown dates"
-            --date_lines "2020-03-16"
-            --date_lines "2020-12-02"
+            --input-dir output/lda/joined
+            --output-dir output/lda/joined
+            --date-lines "2020-03-16" "2020-12-02"
     needs: [generate_measures]
     outputs:
       moderately_sensitive:

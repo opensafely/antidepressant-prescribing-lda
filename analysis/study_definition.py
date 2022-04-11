@@ -25,7 +25,13 @@ from codelists import (
     depression_resolved_codes,
     depression_review_codes,
 )
-from config import start_date, end_date, codelist_path, demographics, lda_measures
+from config import (
+    start_date,
+    end_date,
+    codelist_path,
+    demographics,
+    lda_measures,
+)
 
 from demographic_variables import demographic_variables
 from depression_variables import depression_register_variables, dep003_variables
@@ -66,7 +72,10 @@ study = StudyDefinition(
             returning="date",
             date_format="YYYY-MM-DD",
             find_last_match_in_period=True,
-            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            between=[
+                "first_day_of_month(index_date)",
+                "last_day_of_month(index_date)",
+            ],
             return_expectations={
                 "date": {
                     "earliest": "first_day_of_month(index_date)",
@@ -110,7 +119,10 @@ study = StudyDefinition(
             returning="date",
             date_format="YYYY-MM-DD",
             find_last_match_in_period=True,
-            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            between=[
+                "first_day_of_month(index_date)",
+                "last_day_of_month(index_date)",
+            ],
             return_expectations={
                 "date": {
                     "earliest": "first_day_of_month(index_date)",
@@ -146,7 +158,10 @@ study = StudyDefinition(
             returning="date",
             date_format="YYYY-MM-DD",
             find_last_match_in_period=True,
-            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            between=[
+                "first_day_of_month(index_date)",
+                "last_day_of_month(index_date)",
+            ],
             return_expectations={
                 "date": {
                     "earliest": "first_day_of_month(index_date)",
@@ -182,7 +197,10 @@ study = StudyDefinition(
             returning="date",
             date_format="YYYY-MM-DD",
             find_last_match_in_period=True,
-            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            between=[
+                "first_day_of_month(index_date)",
+                "last_day_of_month(index_date)",
+            ],
             return_expectations={
                 "date": {
                     "earliest": "first_day_of_month(index_date)",
@@ -218,7 +236,10 @@ study = StudyDefinition(
             returning="date",
             date_format="YYYY-MM-DD",
             find_last_match_in_period=True,
-            between=["first_day_of_month(index_date)", "last_day_of_month(index_date)"],
+            between=[
+                "first_day_of_month(index_date)",
+                "last_day_of_month(index_date)",
+            ],
             return_expectations={
                 "date": {
                     "earliest": "first_day_of_month(index_date)",
@@ -325,3 +346,15 @@ for o in outcomes:
             small_number_suppression=True,
         )
         measures.append(new_m)
+
+# Any current antidepressant by demographic subgroup for Table1
+# Use the measures framework for consistent small number suppression
+for d in demographics:
+    m = Measure(
+        id="antidepressant_any_{}_rate".format(d),
+        numerator="antidepressant_any",
+        denominator="population",
+        group_by=[d],
+        small_number_suppression=True,
+    )
+    measures.append(m)

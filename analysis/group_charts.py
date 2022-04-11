@@ -50,8 +50,12 @@ def get_group_chart(measure_table, date_lines=None):
     plt.figure()
     measure_table.set_index("date", inplace=True)
     try:
-        measure_table.groupby(measure_table.attrs["group_by"]).value.plot(legend=True)
-        plt.legend(bbox_to_anchor=(1.05, 1.0), loc="upper left", fontsize="small")
+        measure_table.groupby(measure_table.attrs["group_by"]).value.plot(
+            legend=True
+        )
+        plt.legend(
+            bbox_to_anchor=(1.05, 1.0), loc="upper left", fontsize="small"
+        )
     except ValueError:
         # No group_by attribute
         measure_table.value.plot(legend=None)
@@ -67,6 +71,7 @@ def write_group_chart(group_chart, path):
 
 def add_date_lines(plt, vlines):
     # TODO: Check that it is within the range?
+    print(vlines)
     for date in vlines:
         try:
             plt.axvline(x=pandas.to_datetime(date), color="orange", ls="--")
@@ -79,19 +84,19 @@ def add_date_lines(plt, vlines):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input_dir",
+        "--input-dir",
         required=True,
         type=pathlib.Path,
         help="Path to the input directory",
     )
     parser.add_argument(
-        "--output_dir",
+        "--output-dir",
         required=True,
         type=pathlib.Path,
         help="Path to the output directory",
     )
     parser.add_argument(
-        "--date_lines",
+        "--date-lines",
         nargs="+",
         help="Vertical date lines",
     )
