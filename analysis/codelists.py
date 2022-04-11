@@ -1,24 +1,25 @@
 ######################################
 
-# Some covariates used in the study are created from codelists of clinical conditions or
-# numerical values available on a patient's records.
-# This script fetches all of the codelists identified in codelists.txt from OpenCodelists.
+# Some covariates used in the study are created from codelists of clinical
+# conditions or numerical values available on a patient's records.
+# This script fetches all of the codelists identified in codelists.txt from
+# OpenCodelists.
 
 ######################################
 
 
 # --- IMPORT STATEMENTS ---
 
-## Import code building blocks from cohort extractor package
-from cohortextractor import codelist, codelist_from_csv
+# Import code building blocks from cohort extractor package
+from cohortextractor import codelist_from_csv
 
 
 # --- CODELISTS ---
 
 
-## Medication DM&D
+# Medication DM&D
 
-### Selective serotonin reputake inhibitors
+# Selective serotonin reputake inhibitors
 ssri_codes = codelist_from_csv(
     "codelists/opensafely-selective-serotonin-reuptake-inhibitors-dmd.csv",
     system="snomed",
@@ -40,58 +41,58 @@ other_antidepressant_codes = codelist_from_csv(
     column="dmd_id",
 )
 
-## Groups
+# Groups
 
-### Learning disabilities
+# Learning disabilities
 learning_disability_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-ld_cod.csv",
     system="snomed",
     column="code",
 )
 
-### Autism
+# Autism
 autism_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-autism_cod.csv",
     system="snomed",
     column="code",
 )
 
-### Care homes
+# Care homes
 carehome_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-carehome_cod.csv",
     system="snomed",
     column="code",
 )
 
-### Depression
+# Depression
 depression_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-depr_cod.csv",
     system="snomed",
     column="code",
 )
 
-### Depression resolved
+# Depression resolved
 depression_resolved_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-depres_cod.csv",
     system="snomed",
     column="code",
 )
 
-### Depression Review
+# Depression Review
 depression_review_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-deprvw_cod.csv",
     system="snomed",
     column="code",
 )
 
-### Depression indicator unsuitable
+# Depression indicator unsuitable
 depression_review_unsuitable_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-deprpcapu_cod.csv",
     system="snomed",
     column="code",
 )
 
-### Depression indicator informed dissent
+# Depression indicator informed dissent
 depression_review_dissent_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-deprpcadec_cod.csv",
     system="snomed",
@@ -99,16 +100,16 @@ depression_review_dissent_codes = codelist_from_csv(
 )
 
 
-### Depression review invitation
+# Depression review invitation
 depression_invitation_codes = codelist_from_csv(
     "codelists/nhsd-primary-care-domain-refsets-deprinvite_cod.csv",
     system="snomed",
     column="code",
 )
 
-## Variables
+# Variables
 
-### Ethnicity
+# Ethnicity
 # TODO: switch to snomed once codelist is ready
 # Not running on EMIS, and this codelist has less missingness than primis
 ethnicity_codes_16 = codelist_from_csv(

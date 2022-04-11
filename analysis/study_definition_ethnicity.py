@@ -1,12 +1,7 @@
 from cohortextractor import (
     StudyDefinition,
     patients,
-    codelist,
-    codelist_from_csv,
-    Measure,
 )
-
-from datetime import date
 
 from config import end_date
 

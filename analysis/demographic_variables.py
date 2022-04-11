@@ -193,7 +193,8 @@ demographic_variables = dict(
             "incidence": 0.5,
         },
     ),
-    # The most recent date that the patient registered for GMS, where this registration occurred on or before the achievement date.
+    # The most recent date that the patient registered for GMS, where this
+    # registration occurred on or before the achievement date.
     gms_registration_status=patients.satisfying(
         """
         registered AND

@@ -1,7 +1,7 @@
 ######################################
 
-# This script provides the formal specification of the study data that will be extracted from
-# the OpenSAFELY database.
+# This script provides the formal specification of the study data that will be
+# extracted from the OpenSAFELY database.
 
 ######################################
 

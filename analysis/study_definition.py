@@ -1,7 +1,7 @@
 ######################################
 
-# This script provides the formal specification of the study data that will be extracted from
-# the OpenSAFELY database.
+# This script provides the formal specification of the study data that will
+# be extracted from the OpenSAFELY database.
 
 ######################################
 
@@ -23,18 +23,19 @@ from codelists import (
     other_antidepressant_codes,
     depression_codes,
     depression_resolved_codes,
-    depression_review_codes,
 )
 from config import (
     start_date,
     end_date,
-    codelist_path,
     demographics,
     lda_measures,
 )
 
 from demographic_variables import demographic_variables
-from depression_variables import depression_register_variables, dep003_variables
+from depression_variables import (
+    depression_register_variables,
+    dep003_variables,
+)
 
 # Define study population and variables
 study = StudyDefinition(
@@ -65,7 +66,7 @@ study = StudyDefinition(
     depression=patients.satisfying(
         """
         depression_date AND
-	NOT depression_resolved
+        NOT depression_resolved
         """,
         depression_date=patients.with_these_clinical_events(
             codelist=depression_codes,
@@ -283,7 +284,7 @@ study = StudyDefinition(
     ),
 )
 
-# TODO: Small number suppression may be overly stringent for decile chart production
+# TODO: Small number suppression may be overly stringent for decile charts
 # See: https://github.com/opensafely-core/cohort-extractor/issues/759
 # When running, we should check how much is redacted
 # Using tested code now rather than custom decile chart redaction code

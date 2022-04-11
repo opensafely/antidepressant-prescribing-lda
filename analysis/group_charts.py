@@ -34,7 +34,9 @@ def get_measure_tables(path):
             # We can reconstruct the parameters passed to `Measure` without
             # the study definition.
             measure_table.attrs["id"] = measure_fname_match.group("id")
-            measure_table.attrs["denominator"] = _get_denominator(measure_table)
+            measure_table.attrs["denominator"] = _get_denominator(
+                measure_table
+            )
             measure_table.attrs["group_by"] = _get_group_by(measure_table)
 
             yield measure_table

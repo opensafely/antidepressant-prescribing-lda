@@ -20,12 +20,13 @@ from codelists import (
     depression_invitation_codes,
 )
 
-from config import start_date, depr_register_date
+from config import depr_register_date
 
 depression_register_variables = dict(
     # Depression register:  Patients aged at least 18 years old whose latest
     # unresolved episode of depression is since 1st April 2006
-    # NOTE: dependency on age and gms_registration_status from demographic_variables.py
+    # NOTE: dependency on age and gms_registration_status from
+    # demographic_variables.py
     # Demographic variables MUST be loaded before this dictionary in the study
     # If demographics dict is not also going to be loaded, the individual
     # variables should also be loaded into the study definition
@@ -43,7 +44,8 @@ depression_register_variables = dict(
         ((depression_for_register AND (NOT depression_resolved_register)) OR
         (depression_resolved_register_date <= depression_for_register_date))
         """,
-        # Date of the latest first or new episode of depression up to and including the achievement date.
+        # Date of the latest first or new episode of depression up to and
+        # including the achievement date.
         depression_for_register=patients.with_these_clinical_events(
             between=[
                 depr_register_date,
@@ -156,9 +158,9 @@ depression_indicator_variables = dict(
             "last_day_of_month(index_date)",
         ],
     ),
-    # Reject patients passed to this rule who registered with the GP practice in the 3 month period
-    # leading up to and including the payment period end date.
-    # Select the remaining patients.
+    # Reject patients passed to this rule who registered with the GP practice
+    # in the 3 month period leading up to and including the payment period end
+    # date. Select the remaining patients.
     registered_3mo=patients.registered_with_one_practice_between(
         start_date="first_day_of_month(index_date) - 2 months",
         end_date="last_day_of_month(index_date)",
@@ -173,7 +175,7 @@ dep003_variables = dict(
         dep003_denominator_r1 AND
         dep003_denominator_r2 AND
         (
-            dep003_denominator_r3 
+            dep003_denominator_r3
             OR
             (
                 dep003_denominator_r4 AND
@@ -190,7 +192,8 @@ dep003_variables = dict(
             depression_15mo
             """,
         ),
-        # REJECT those who had their depression review at least 12 months before PPED
+        # REJECT those who had their depression review
+        # at least 12 months before PPED
         dep003_denominator_r2=patients.satisfying(
             """
             NOT review_before_12mo
@@ -231,7 +234,7 @@ dep003_variables = dict(
     ),
     dep003_numerator=patients.satisfying(
         """
-        dep003_denominator AND 
+        dep003_denominator AND
         dep003_denominator_r3
         """,
         return_expectations={"incidence": 0.6},
