@@ -104,8 +104,8 @@ actions:
   #############################
   generate_qof_deciles_charts:
     run: >
-            deciles-charts:v0.0.8
-            --input-dir output/qof/joined
+            deciles-charts:v0.0.9
+            --input-files output/qof/joined/measure_*_practice_rate.csv
             --output-dir output/qof/joined
     needs: [generate_measures_register, generate_measures_dep003]
     outputs:
@@ -115,7 +115,7 @@ actions:
   generate_qof_groups:
     run: >
             python:latest analysis/group_charts.py
-            --input-dir output/qof/joined
+            --input-files output/qof/joined/measure_*.csv
             --output-dir output/qof/joined
             --date-lines "2020-03-31" "2021-03-31"
     needs: [generate_measures_register, generate_measures_dep003]
@@ -137,7 +137,7 @@ actions:
   generate_lda_groups:
     run: >
             python:latest analysis/group_charts.py
-            --input-dir output/lda/joined
+            --input-files output/lda/joined/measure_*.csv
             --output-dir output/lda/joined
             --date-lines "2020-03-16" "2020-12-02"
     needs: [generate_measures]
