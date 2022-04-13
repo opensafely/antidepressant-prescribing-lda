@@ -114,7 +114,7 @@ actions:
 
   generate_qof_groups:
     run: >
-            python:latest analysis/group_charts.py
+            python:latest python analysis/group_charts.py
             --input-files output/qof/joined/measure_*.csv
             --output-dir output/qof/joined
             --date-lines "2019-03-31" "2020-03-31" "2021-03-31"
@@ -125,7 +125,7 @@ actions:
 
   generate_lda_table1:
     run: >
-            python:latest analysis/table1.py
+            python:latest python analysis/table1.py
             --input-dir output/lda/joined
             --output-dir output/lda/joined
             --measure-attribute "antidepressant_any"
@@ -136,7 +136,7 @@ actions:
 
   generate_lda_groups:
     run: >
-            python:latest analysis/group_charts.py
+            python:latest python analysis/group_charts.py
             --input-files output/lda/joined/measure_*.csv
             --output-dir output/lda/joined
             --date-lines "2020-03-16" "2020-12-02"
