@@ -47,7 +47,7 @@ actions:
 
   join_qof_cohorts:
     run: >
-      cohort-joiner:v0.0.6
+      cohort-joiner:v0.0.18
         --lhs output/qof/input_*.csv
         --rhs output/input_ethnicity.csv
         --output-dir output/qof/joined
