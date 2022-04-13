@@ -58,7 +58,7 @@ actions:
 
   join_lda_cohorts:
     run: >
-      cohort-joiner:v0.0.6
+      cohort-joiner:v0.0.18
         --lhs output/lda/input_*.csv
         --rhs output/input_ethnicity.csv
         --output-dir output/lda/joined
@@ -117,7 +117,7 @@ actions:
             python:latest analysis/group_charts.py
             --input-files output/qof/joined/measure_*.csv
             --output-dir output/qof/joined
-            --date-lines "2020-03-31" "2021-03-31"
+            --date-lines "2019-03-31" "2020-03-31" "2021-03-31"
     needs: [generate_measures_register, generate_measures_dep003]
     outputs:
       moderately_sensitive:
