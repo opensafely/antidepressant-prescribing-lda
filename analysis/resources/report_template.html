@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title> QOF </title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container">
+	<h1> Changes and varation in QOF {{ reports.metadata.marker }} </h1>
+	<h2> from {{ reports.metadata.start_date }} to {{ reports.metadata.end_date }}</h2>
+	<h3> QOF Version 46.0 </h3>
+	<h2 id="what"> What it is </h2>
+	<p>We aim to use OpenSAFELY to quantify the extent to which this indicator was disrupted during the pandemic.</p>
+	<h2 id="why"> Why it matters </h2>
+	<p>General practice has been disrupted by the pandemic in many clinical areas (e.g., Curtis et al., 2021; Williamson et al., 2020). </p>
+	<h2 id="indicators"> Indicators  </h2>
+        {% for indicator, data in reports.indicators.items() %}
+	<div id={{ indicator }}>
+		<h2>{{ indicator }}</h2>
+		<h3>Description: {{ data.description }}</h3>
+		<h3>Business Rules: {{ data.business_rules }}</h3>
+		{% for title, path in data.charts.items() %}
+			<h3><code>{{ title }}</code></h3>
+			<img src="{{ path }}" alt="A chart showing {{ title }}">
+		{% endfor %}
+	</div>
+
+        {% endfor %}
+    </div>
+</body>
+
+</html>

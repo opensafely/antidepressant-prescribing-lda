@@ -144,3 +144,17 @@ actions:
     outputs:
       moderately_sensitive:
         cohort: output/lda/joined/group_chart_*.png
+
+  #############################
+  # Display
+  #############################
+  generate_report:
+    run: >
+            python:latest python analysis/report.py
+            --input-dir output/qof/joined
+            --output-dir output/qof/joined
+            --resource-dir analysis/resources
+    needs: [generate_qof_deciles_charts, generate_qof_groups]
+    outputs:
+      moderately_sensitive:
+        cohort: output/qof/joined/report.html
