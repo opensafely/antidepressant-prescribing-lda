@@ -41,29 +41,26 @@ depression_register_variables = dict(
     depression_register=patients.satisfying(
         """
         depression_list_size AND
-        ((depression_for_register AND (NOT depression_resolved_register)) OR
-        (depression_resolved_register_date <= depression_for_register_date))
+        latest_depression_date AND
+        NOT latest_depression_resolved
         """,
         # Date of the latest first or new episode of depression up to and
         # including the achievement date.
-        depression_for_register=patients.with_these_clinical_events(
+        latest_depression_date=patients.with_these_clinical_events(
             between=[
                 depr_register_date,
                 "last_day_of_month(index_date)",
             ],
             codelist=depression_codes,
-            returning="binary_flag",
+            returning="date",
             find_last_match_in_period=True,
-            include_date_of_match=True,
             date_format="YYYY-MM-DD",
         ),
-        depression_resolved_register=patients.with_these_clinical_events(
-            on_or_before="last_day_of_month(index_date)",
+        latest_depression_resolved=patients.with_these_clinical_events(
+            on_or_after="latest_depression_date",
             codelist=depression_resolved_codes,
             returning="binary_flag",
             find_last_match_in_period=True,
-            include_date_of_match=True,
-            date_format="YYYY-MM-DD",
         ),
     ),
 )
