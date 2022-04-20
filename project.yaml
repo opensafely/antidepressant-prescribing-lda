@@ -13,31 +13,31 @@ actions:
   
   # Since this runs on everyone, we can reuse for both studies 
   generate_study_population_ethnicity:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_ethnicity --output-dir=output
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_ethnicity --output-dir=output --output-format=csv.gz
     outputs:
       highly_sensitive:
-        cohort: output/input_ethnicity.csv
+        cohort: output/input_ethnicity.csv.gz
 
   # Generate depression register variable among the total population by month
   generate_study_population_register:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_register --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/qof
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_register --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/qof --output-format=csv.gz
     outputs:
       highly_sensitive:
-        cohort: output/qof/input_register_*.csv
+        cohort: output/qof/input_register_*.csv.gz
 
   # Generate QOF variables for those on the depression register by month
   generate_study_population_dep003:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/qof
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/qof --output-format=csv.gz
     outputs:
       highly_sensitive:
-        cohort: output/qof/input_dep003_*.csv
+        cohort: output/qof/input_dep003_*.csv.gz
   
   # Generate depression and prescription variables (including QOF) for those with LD&A by month
   generate_study_population:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/lda
+    run: cohortextractor:latest generate_cohort --study-definition study_definition --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/lda --output-format=csv.gz
     outputs:
       highly_sensitive:
-        cohort: output/lda/input_*.csv
+        cohort: output/lda/input_*.csv.gz
 
   ####################
   # Join ethnicity to all generated input files
@@ -48,24 +48,24 @@ actions:
   join_qof_cohorts:
     run: >
       cohort-joiner:v0.0.18
-        --lhs output/qof/input_*.csv
-        --rhs output/input_ethnicity.csv
+        --lhs output/qof/input_*.csv.gz
+        --rhs output/input_ethnicity.csv.gz
         --output-dir output/qof/joined
     needs: [generate_study_population_ethnicity, generate_study_population_register, generate_study_population_dep003]
     outputs:
       highly_sensitive:
-        cohort: output/qof/joined/input_*.csv
+        cohort: output/qof/joined/input_*.csv.gz
 
   join_lda_cohorts:
     run: >
       cohort-joiner:v0.0.18
-        --lhs output/lda/input_*.csv
-        --rhs output/input_ethnicity.csv
+        --lhs output/lda/input_*.csv.gz
+        --rhs output/input_ethnicity.csv.gz
         --output-dir output/lda/joined
     needs: [generate_study_population_ethnicity, generate_study_population]
     outputs:
       highly_sensitive:
-        cohort: output/lda/joined/input_*.csv
+        cohort: output/lda/joined/input_*.csv.gz
 
   ####################
   # Measures 
