@@ -15,6 +15,8 @@ def _get_denominator(measure_table):
     return measure_table.columns[-3]
 
 
+# WARNING: cannot always recreate groupby, so not for general case
+# https://github.com/opensafely-actions/deciles-charts/issues/17
 def _get_group_by(measure_table):
     return list(measure_table.columns[:-4])
 
@@ -46,16 +48,15 @@ def get_group_chart(measure_table, date_lines=None):
     # TODO: do not hard code date and value
     plt.figure()
     measure_table.set_index("date", inplace=True)
-    try:
+    if len(measure_table.attrs["group_by"])==0 or "total" in measure_table.attrs["id"]:
+        measure_table.value.plot(legend=None)
+    else:
         measure_table.groupby(measure_table.attrs["group_by"]).value.plot(
             legend=True
         )
         plt.legend(
             bbox_to_anchor=(1.05, 1.0), loc="upper left", fontsize="small"
         )
-    except ValueError:
-        # No group_by attribute
-        measure_table.value.plot(legend=None)
     if date_lines:
         add_date_lines(plt, date_lines)
     plt.tight_layout()
@@ -76,7 +77,6 @@ def match_paths(pattern):
 
 def add_date_lines(plt, vlines):
     # TODO: Check that it is within the range?
-    print(vlines)
     for date in vlines:
         try:
             plt.axvline(x=pandas.to_datetime(date), color="orange", ls="--")
