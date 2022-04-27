@@ -112,9 +112,9 @@ depression_invitation_codes = codelist_from_csv(
 # Ethnicity
 # TODO: switch to snomed once codelist is ready
 # Not running on EMIS, and this codelist has less missingness than primis
-ethnicity_codes_16 = codelist_from_csv(
+ethnicity_codes_6 = codelist_from_csv(
     "codelists/opensafely-ethnicity.csv",
     system="ctv3",
     column="Code",
-    category_column="Grouping_16",
+    category_column="Grouping_6",
 )
