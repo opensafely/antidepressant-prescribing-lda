@@ -3,7 +3,7 @@ from cohortextractor import (
     patients,
 )
 
-from config import end_date
+from config import start_date
 
 from codelists import ethnicity_codes_6
 
@@ -12,7 +12,7 @@ study = StudyDefinition(
         "date": {"earliest": "1900-01-01", "latest": "today"},
         "rate": "uniform",
     },
-    index_date=end_date,
+    index_date=start_date,
     # Here we extract from all patients because we are only extracting
     # ethnicity at one time point. If we restrict this to our study population,
     # cohorts extracted at another time may not be included in this cohort
