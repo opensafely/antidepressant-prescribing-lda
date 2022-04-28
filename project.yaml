@@ -103,13 +103,19 @@ actions:
   #############################
   generate_qof_deciles_charts:
     run: >
-            deciles-charts:v0.0.9
+            deciles-charts:v0.0.15
             --input-files output/qof/joined/measure_*_practice_rate.csv
             --output-dir output/qof/joined
+    config:
+      show_outer_percentiles: false
+      tables:
+        output: true
+      charts:
+        output: true
     needs: [generate_measures_register, generate_measures_dep003]
     outputs:
       moderately_sensitive:
-        cohort: output/qof/joined/deciles_chart_*.png
+        cohort: output/qof/joined/deciles_*_*.*
 
   generate_qof_groups:
     run: >
