@@ -13,21 +13,10 @@ study = StudyDefinition(
         "rate": "uniform",
     },
     index_date=end_date,
-    population=patients.satisfying(
-        """
-        NOT has_died
-        AND
-        registered
-        """,
-        has_died=patients.died_from_any_cause(
-            on_or_before="index_date",
-            returning="binary_flag",
-        ),
-        registered=patients.satisfying(
-            "registered_at_start",
-            registered_at_start=patients.registered_as_of("index_date"),
-        ),
-    ),
+    # Here we extract from all patients because we are only extracting
+    # ethnicity at one time point. If we restrict this to our study population,
+    # cohorts extracted at another time may not be included in this cohort
+    population=patients.all(),
     # Categories from 2001 census
     # https://www.ethnicity-facts-figures.service.gov.uk/style-guide/ethnic-groups#2001-census
     ethnicity=patients.categorised_as(

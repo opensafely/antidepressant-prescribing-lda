@@ -10,7 +10,7 @@ actions:
   ####################
   # Cohort Generation
   ####################
-  
+
   # Since this runs on everyone, we can reuse for both studies 
   generate_study_population_ethnicity:
     run: cohortextractor:latest generate_cohort --study-definition study_definition_ethnicity --output-dir=output --output-format=csv.gz
@@ -31,7 +31,7 @@ actions:
     outputs:
       highly_sensitive:
         cohort: output/qof/input_dep003_*.csv.gz
-  
+
   # Generate depression and prescription variables (including QOF) for those with LD&A by month
   generate_study_population:
     run: cohortextractor:latest generate_cohort --study-definition study_definition --index-date-range "2019-01-01 to 2022-01-01 by month" --output-dir=output/lda --output-format=csv.gz
@@ -70,7 +70,7 @@ actions:
   ####################
   # Measures 
   ####################
-  
+
   # Output summary register value by date
   generate_measures_register:
       run: cohortextractor:latest generate_measures --study-definition study_definition_register --output-dir=output/qof/joined
@@ -88,7 +88,6 @@ actions:
         moderately_sensitive:
           # Only output the single summary file
           measure_csv: output/qof/joined/measure_dep003_*_rate.csv
-       
 
   # Output the summary LD&A values by date
   generate_measures:
