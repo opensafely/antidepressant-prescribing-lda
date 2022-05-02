@@ -334,16 +334,16 @@ for o in outcomes:
         m = Measure(
             id="{}_{}_rate".format(o, group),
             numerator=o,
-            denominator=group,
-            group_by=["population"],
+            denominator="population",
+            group_by=[group],
             small_number_suppression=True,
         )
         measures.append(m)
         new_m = Measure(
             id="new_{}_{}_rate".format(o, group),
             numerator="new_{}".format(o),
-            denominator=group,
-            group_by=["population"],
+            denominator="population",
+            group_by=[group],
             small_number_suppression=True,
         )
         measures.append(new_m)
