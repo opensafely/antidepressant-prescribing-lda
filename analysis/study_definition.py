@@ -228,7 +228,7 @@ study = StudyDefinition(
         return_expectations={"incidence": 0.01},
     ),
     # Other antidepressant
-    antidepressant_other=patients.satisfying(
+    antidepressant_other_cod=patients.satisfying(
         """
         antidepressant_other_date
         """,
@@ -249,7 +249,7 @@ study = StudyDefinition(
             },
         ),
     ),
-    new_antidepressant_other=patients.satisfying(
+    new_antidepressant_other_cod=patients.satisfying(
         """
         antidepressant_other AND
         NOT previous_other
@@ -265,6 +265,18 @@ study = StudyDefinition(
             return_expectations={"incidence": 0.01},
         ),
         return_expectations={"incidence": 0.01},
+    ),
+    antidepressant_other=patients.satisfying(
+        """
+        antidepressant_maoi OR
+        antidepressant_other
+        """
+    ),
+    new_antidepressant_other=patients.satisfying(
+        """
+        new_antidepressant_maoi OR
+        new_antidepressant_other
+        """,
     ),
     antidepressant_any=patients.satisfying(
         """
@@ -306,7 +318,6 @@ outcomes = [
     "depression",
     "antidepressant_ssri",
     "antidepressant_tricyclic",
-    "antidepressant_maoi",
     "antidepressant_other",
     "antidepressant_any",
 ]
