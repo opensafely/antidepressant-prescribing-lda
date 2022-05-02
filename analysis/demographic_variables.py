@@ -112,19 +112,18 @@ demographic_variables = dict(
         },
     ),
     # Learning disability
-    # TODO: can there be missing binary flag? Or set to no?
-    ld=patients.with_these_clinical_events(
-        learning_disability_codes,
-        on_or_before="last_day_of_month(index_date)",
-        returning="binary_flag",
-        return_expectations={"incidence": 0.2},
-    ),
-    ld_label=patients.categorised_as(
+    learning_disability=patients.categorised_as(
         {
             "Unknown": "DEFAULT",
             "No record of learning disability": "ld='0'",
             "Record of learning disability": "ld='1'",
         },
+        ld=patients.with_these_clinical_events(
+            learning_disability_codes,
+            on_or_before="last_day_of_month(index_date)",
+            returning="binary_flag",
+            return_expectations={"incidence": 0.2},
+        ),
         return_expectations={
             "rate": "universal",
             "category": {
@@ -137,18 +136,18 @@ demographic_variables = dict(
         },
     ),
     # Autism
-    autism=patients.with_these_clinical_events(
-        autism_codes,
-        on_or_before="index_date",
-        returning="binary_flag",
-        return_expectations={"incidence": 0.3},
-    ),
-    autism_label=patients.categorised_as(
+    autism=patients.categorised_as(
         {
             "Unknown": "DEFAULT",
-            "No record of autism": "autism='0'",
-            "Record of autism": "autism='1'",
+            "No record of autism": "aut='0'",
+            "Record of autism": "aut='1'",
         },
+        aut=patients.with_these_clinical_events(
+            autism_codes,
+            on_or_before="index_date",
+            returning="binary_flag",
+            return_expectations={"incidence": 0.3},
+        ),
         return_expectations={
             "rate": "universal",
             "category": {
@@ -161,18 +160,18 @@ demographic_variables = dict(
         },
     ),
     # Care home
-    carehome=patients.with_these_clinical_events(
-        carehome_codes,
-        on_or_before="last_day_of_month(index_date)",
-        returning="binary_flag",
-        return_expectations={"incidence": 0.2},
-    ),
-    carehome_label=patients.categorised_as(
+    carehome=patients.categorised_as(
         {
             "Unknown": "DEFAULT",
-            "Not in carehome": "carehome='0'",
-            "Carehome": "carehome='1'",
+            "Not in carehome": "ch='0'",
+            "Carehome": "ch='1'",
         },
+        ch=patients.with_these_clinical_events(
+            carehome_codes,
+            on_or_before="last_day_of_month(index_date)",
+            returning="binary_flag",
+            return_expectations={"incidence": 0.2},
+        ),
         return_expectations={
             "rate": "universal",
             "category": {

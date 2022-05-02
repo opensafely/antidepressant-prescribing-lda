@@ -13,13 +13,13 @@ demographics = [
     "sex",
     "region",
     "carehome",
-    "ld",
+    "learning_disability",
     "imd",
     "ethnicity",
 ]
 
 # subgroups for LDA population plots
-lda_measures = ["carehome", "ld", "autism"]
+lda_measures = ["carehome", "learning_disability", "autism"]
 
 # name of measure
 marker = "Depression review"
