@@ -73,13 +73,10 @@ study = StudyDefinition(
             returning="date",
             date_format="YYYY-MM-DD",
             find_last_match_in_period=True,
-            between=[
-                "first_day_of_month(index_date)",
-                "last_day_of_month(index_date)",
-            ],
+            on_or_before="last_day_of_month(index_date)",
             return_expectations={
                 "date": {
-                    "earliest": "first_day_of_month(index_date)",
+                    "earliest": start_date,
                     "latest": "last_day_of_month(index_date)",
                 },
                 "incidence": 0.98,
@@ -230,9 +227,9 @@ study = StudyDefinition(
     # Other antidepressant
     antidepressant_other_cod=patients.satisfying(
         """
-        antidepressant_other_date
+        antidepressant_other_cod_date
         """,
-        antidepressant_other_date=patients.with_these_medications(
+        antidepressant_other_cod_date=patients.with_these_medications(
             codelist=other_antidepressant_codes,
             returning="date",
             date_format="YYYY-MM-DD",
@@ -251,7 +248,7 @@ study = StudyDefinition(
     ),
     new_antidepressant_other_cod=patients.satisfying(
         """
-        antidepressant_other AND
+        antidepressant_other_cod AND
         NOT previous_other
         """,
         previous_other=patients.with_these_medications(
@@ -259,8 +256,8 @@ study = StudyDefinition(
             returning="binary_flag",
             find_last_match_in_period=True,
             between=[
-                "antidepressant_other_date - 2 years",
-                "antidepressant_other_date - 1 day",
+                "antidepressant_other_cod_date - 2 years",
+                "antidepressant_other_cod_date - 1 day",
             ],
             return_expectations={"incidence": 0.01},
         ),
@@ -269,20 +266,19 @@ study = StudyDefinition(
     antidepressant_other=patients.satisfying(
         """
         antidepressant_maoi OR
-        antidepressant_other
+        antidepressant_other_cod
         """
     ),
     new_antidepressant_other=patients.satisfying(
         """
         new_antidepressant_maoi OR
-        new_antidepressant_other
+        new_antidepressant_other_cod
         """,
     ),
     antidepressant_any=patients.satisfying(
         """
         antidepressant_ssri OR
         antidepressant_tricyclic OR
-        antidepressant_maoi OR
         antidepressant_other
         """
     ),
@@ -290,10 +286,27 @@ study = StudyDefinition(
         """
         new_antidepressant_ssri OR
         new_antidepressant_tricyclic OR
-        new_antidepressant_maoi OR
         new_antidepressant_other
         """,
     ),
+    # Prescribed without a diagnosis within the last 2 years
+    # TODO: should we allow for some time in the days following the rx?
+    rx_no_diagnosis=patients.satisfying(
+        """
+        antidepressant_any AND
+        NOT diag_2yr
+        """,
+        diag_2yr=patients.with_these_clinical_events(
+            codelist=depression_codes,
+            returning="binary_flag",
+            find_last_match_in_period=True,
+            between=[
+                "first_day_of_month(index_date) - 2 years",
+                "last_day_of_month(index_date)",
+            ],
+            return_expectations={"incidence": 0.01},
+        ),
+    )
 )
 
 # TODO: Small number suppression may be overly stringent for decile charts
@@ -312,7 +325,13 @@ measures = [
         group_by=["population"],
         small_number_suppression=True,
     ),
-    # TODO: do we also want QOF achievement by practice for deciles?
+    Measure(
+        id="rx_no_diag_total_rate",
+        numerator="rx_no_diagnosis",
+        denominator="population",
+        group_by=["population"],
+        small_number_suppression=True,
+    ),
 ]
 outcomes = [
     "depression",
