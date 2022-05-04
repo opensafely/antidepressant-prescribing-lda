@@ -30,7 +30,7 @@ depression_register_variables = dict(
     # Demographic variables MUST be loaded before this dictionary in the study
     # If demographics dict is not also going to be loaded, the individual
     # variables should also be loaded into the study definition
-    depression_list_size=patients.satisfying(
+    depression_list_type=patients.satisfying(
         """
         gms_registration_status AND
         age>=18 AND
@@ -40,7 +40,7 @@ depression_register_variables = dict(
     ),
     depression_register=patients.satisfying(
         """
-        depression_list_size AND
+        depression_list_type AND
         latest_depression_date AND
         NOT latest_depression_resolved
         """,
