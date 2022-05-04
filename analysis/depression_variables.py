@@ -63,10 +63,9 @@ depression_register_variables = dict(
             codelist=depression_resolved_codes,
             between=[
                 "latest_depression_date",
-                "last_day_of_month(index_date)"
+                "last_day_of_month(index_date)",
             ],
             returning="binary_flag",
-            find_last_match_in_period=True,
         ),
     ),
 )
@@ -74,6 +73,8 @@ depression_register_variables = dict(
 
 depression_indicator_variables = dict(
     # Date variable: reject those with latest depression at least 15 months ago
+    # If we use on_or_before and reject, we have no way of knowing if it is
+    # the latest episode of depression
     # Instead select those with depression in the last 15 months
     depression_15mo=patients.with_these_clinical_events(
         codelist=depression_codes,
@@ -86,39 +87,36 @@ depression_indicator_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
     ),
-    # Reject patients passed to this rule who had their depression review at
-    # least 12 months before the payment period end date.
-    review_before_12mo=patients.satisfying(
-        """
-        ever_review AND (NOT review_within_12mo)
-        """,
-        ever_review=patients.with_these_clinical_events(
-            codelist=depression_review_codes,
-            returning="binary_flag",
-            find_last_match_in_period=True,
-            between=[depr_register_date, "last_day_of_month(index_date)"],
-        ),
-        review_within_12mo=patients.with_these_clinical_events(
-            codelist=depression_review_codes,
-            returning="binary_flag",
-            find_last_match_in_period=True,
-            between=[
-                "first_day_of_month(index_date) - 11 months",
-                "last_day_of_month(index_date)",
-            ],
-        ),
-    ),
     # Date of the first depression review recorded within the period from 10 to
     # 56 days after the patients latest episode of depression up to and
     # including the achievement date.
     review_10_to_56d=patients.with_these_clinical_events(
         codelist=depression_review_codes,
         returning="binary_flag",
-        find_last_match_in_period=True,
+        find_first_match_in_period=True,
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         between=[
             "depression_15mo_date + 10 days",
             "depression_15mo_date + 56 days",
         ],
+    ),
+    # Reject patients passed to this rule who had their depression review at
+    # least 12 months before the payment period end date.
+    # Instead select those with a review in the last 12 months or never review
+    ever_review=patients.with_these_clinical_events(
+        codelist=depression_review_codes,
+        between=[depr_register_date, "last_day_of_month(index_date)"],
+        returning="binary_flag",
+    ),
+    review_12mo=patients.with_these_clinical_events(
+        codelist=depression_review_codes,
+        returning="binary_flag",
+        between=[
+            "first_day_of_month(index_date) - 11 months",
+            "last_day_of_month(index_date)",
+        ],
+        return_expectations={"incidence": 0.01},
     ),
     # The most recent date that depression quality indicator care was
     # identified as being unsuitable for the patient up to and including the
@@ -126,10 +124,9 @@ depression_indicator_variables = dict(
     unsuitable_12mo=patients.with_these_clinical_events(
         codelist=depression_review_unsuitable_codes,
         returning="binary_flag",
-        find_last_match_in_period=True,
         between=[
             "first_day_of_month(index_date) - 11 months",
-            "last_day_of_month(index_date)"
+            "last_day_of_month(index_date)",
         ],
         return_expectations={"incidence": 0.01},
     ),
@@ -138,10 +135,9 @@ depression_indicator_variables = dict(
     dissent_12mo=patients.with_these_clinical_events(
         codelist=depression_review_dissent_codes,
         returning="binary_flag",
-        find_last_match_in_period=True,
         between=[
             "first_day_of_month(index_date) - 11 months",
-            "last_day_of_month(index_date)"
+            "last_day_of_month(index_date)",
         ],
         return_expectations={"incidence": 0.01},
     ),
@@ -164,21 +160,21 @@ depression_indicator_variables = dict(
     depr_invite_1=patients.with_these_clinical_events(
         codelist=depression_invitation_codes,
         returning="binary_flag",
-        find_last_match_in_period=True,
         between=[
             "first_day_of_month(index_date) - 11 months",
             "depr_invite_2_date - 7 days",
         ],
+        return_expectations={"incidence": 0.01},
     ),
     # Date variable: depression diagnosis in the last 3 months
     depression_3mo=patients.with_these_clinical_events(
         codelist=depression_codes,
         returning="binary_flag",
-        find_last_match_in_period=True,
         between=[
             "first_day_of_month(index_date) - 2 months",
             "last_day_of_month(index_date)",
         ],
+        return_expectations={"incidence": 0.01},
     ),
     # Date variable: registered in the last 3 months
     registered_3mo=patients.registered_with_one_practice_between(
@@ -220,7 +216,7 @@ dep003_variables = dict(
         # remaining patients to the next rule.
         dep003_denominator_r2=patients.satisfying(
             """
-            NOT review_before_12mo
+            review_12mo OR NOT ever_review
             """,
         ),
         # Select patients passed to this rule who had a depression review within
@@ -255,7 +251,7 @@ dep003_variables = dict(
         # period end date. Pass all remaining patients to the next rule.
         dep003_denominator_r6=patients.satisfying(
             """
-            NOT (depr_invite_1 AND depr_invite_2)
+            NOT (depr_invite_1 AND depr_invite_2 AND NOT review_10_to_56d)
             """,
         ),
         # Reject patients passed to this rule whose depression diagnosis was in
