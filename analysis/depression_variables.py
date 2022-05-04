@@ -60,8 +60,11 @@ depression_register_variables = dict(
         # most recent depression diagnosis and up to and including the
         # achievement date.
         latest_depression_resolved=patients.with_these_clinical_events(
-            on_or_after="latest_depression_date",
             codelist=depression_resolved_codes,
+            between=[
+                "latest_depression_date",
+                "last_day_of_month(index_date)"
+            ],
             returning="binary_flag",
             find_last_match_in_period=True,
         ),
@@ -124,7 +127,10 @@ depression_indicator_variables = dict(
         codelist=depression_review_unsuitable_codes,
         returning="binary_flag",
         find_last_match_in_period=True,
-        on_or_after="first_day_of_month(index_date) - 11 months",
+        between=[
+            "first_day_of_month(index_date) - 11 months",
+            "last_day_of_month(index_date)"
+        ],
         return_expectations={"incidence": 0.01},
     ),
     # The most recent date the patient chose not to receive depression quality
@@ -133,7 +139,10 @@ depression_indicator_variables = dict(
         codelist=depression_review_dissent_codes,
         returning="binary_flag",
         find_last_match_in_period=True,
-        on_or_after="first_day_of_month(index_date) - 11 months",
+        between=[
+            "first_day_of_month(index_date) - 11 months",
+            "last_day_of_month(index_date)"
+        ],
         return_expectations={"incidence": 0.01},
     ),
     # Date of the earliest invitation for a depression review recorded at least
