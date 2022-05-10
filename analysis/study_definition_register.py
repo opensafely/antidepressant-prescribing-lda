@@ -32,7 +32,7 @@ study = StudyDefinition(
         """
         (sex = "M" OR sex = "F") AND
         # Depression patient list
-        depression_list_size
+        depression_list_type
         """,
     ),
     **demographic_variables,
