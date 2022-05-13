@@ -38,7 +38,7 @@ def parse_indicators(input_dir):
         # Key is the chart title
         charts = {}
         charts[
-            "Percentage of patients meeting indicator {}".format(i)
+            "Patients meeting indicator {}".format(i)
         ] = "group_chart_{}_total_rate.png".format(i)
         charts[
             "{} by GP practice".format(i)
