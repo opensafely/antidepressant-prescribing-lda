@@ -18,8 +18,12 @@ demographics = [
     "ethnicity",
 ]
 
-# subgroups for LDA population plots
-lda_measures = ["carehome", "learning_disability", "autism"]
+# Subgroups for LDA population plots
+# We extract the categorical variables so that we can programmatically use
+# them as labels. We still need to extract the numerical group for use in
+# the measures framework
+# Key is the label, value is the numerical
+lda_subgroups = {"autism": "aut", "learning_disability": "ld", "all":"population"}
 
 # name of measure
 marker = "Depression review"
