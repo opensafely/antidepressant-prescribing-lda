@@ -27,7 +27,3 @@ lda_subgroups = {"autism": "aut", "learning_disability": "ld", "all":"population
 
 # name of measure
 marker = "Depression review"
-
-# TODO: why do we separately need to specify this here? Can we do this cleaner?
-# codelist path
-codelist_path = "codelists/nhsd-primary-care-domain-refsets-deprvw_cod.csv"
