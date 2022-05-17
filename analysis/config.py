@@ -23,7 +23,11 @@ demographics = [
 # them as labels. We still need to extract the numerical group for use in
 # the measures framework
 # Key is the label, value is the numerical
-lda_subgroups = {"autism": "aut", "learning_disability": "ld", "all":"population"}
+lda_subgroups = {
+    "autism": "aut",
+    "learning_disability": "ld",
+    "all": "population",
+}
 
 # name of measure
 marker = "Depression review"

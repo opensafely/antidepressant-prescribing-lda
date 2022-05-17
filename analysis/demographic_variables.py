@@ -72,7 +72,7 @@ demographic_variables = dict(
             "5 - least deprived": """index_of_multiple_deprivation >= 32844*4/5 """,
         },
         index_of_multiple_deprivation=patients.address_as_of(
-            "index_date",
+            "last_day_of_month(index_date)",
             returning="index_of_multiple_deprivation",
             round_to_nearest=100,
         ),
@@ -138,7 +138,7 @@ demographic_variables = dict(
     # Autism
     aut=patients.with_these_clinical_events(
         autism_codes,
-        on_or_before="index_date",
+        on_or_before="last_day_of_month(index_date)",
         returning="binary_flag",
         return_expectations={"incidence": 0.3},
     ),

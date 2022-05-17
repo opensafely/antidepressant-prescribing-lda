@@ -46,6 +46,10 @@ def drop_zero_denominator_rows(measure_table):
 
 
 def scale_thousand(ax):
+    """
+    Scale a proportion for rate by 1000
+    Used for y axis display
+    """
     def thousand_formatter(x, pos):
         return f"{x*1000: .0f}"
 
@@ -54,6 +58,10 @@ def scale_thousand(ax):
 
 
 def scale_hundred(ax):
+    """
+    Scale a proportion for percentage
+    Used for y axis display
+    """
     def hundred_formatter(x, pos):
         return f"{x*100: .0f}"
 
@@ -70,10 +78,10 @@ def get_group_chart(measure_table, date_lines=None, scale=None):
         len(measure_table.attrs["group_by"]) == 0
         or "total" in measure_table.attrs["id"]
     ):
-        measure_table.value.plot(legend=None)
+        measure_table.value.plot(legend=None, ax=ax)
     else:
         measure_table.groupby(measure_table.attrs["group_by"]).value.plot(
-            legend=True
+            legend=False, ax=ax
         )
         plt.legend(
             bbox_to_anchor=(1.05, 1.0), loc="upper left", fontsize="small"
