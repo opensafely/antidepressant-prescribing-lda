@@ -2,7 +2,7 @@ import pathlib
 import argparse
 import pandas as pd
 
-from config import start_date, demographics
+from config import start_date, demographics, lda_subgroups
 
 """
 Generate Table1 by demographics using measures files
@@ -18,7 +18,9 @@ def get_month(input_dir, measure_attribute, d):
     Use measures small number suppression for consistency with measures results
     Get the first month
     """
-    path = input_dir / "measure_{}_{}_rate.csv".format(measure_attribute, d)
+    path = input_dir / "measure_{}_all_{}_rate.csv".format(
+        measure_attribute, d
+    )
 
     try:
         data = pd.read_csv(path)
@@ -84,10 +86,11 @@ def main():
     measure_attribute = args.measure_attribute
 
     tables = []
-    for d in demographics:
+    demographic_subset = list(set(demographics) - set(lda_subgroups.keys()))
+    for d in demographic_subset:
         data = get_month(input_dir, measure_attribute, d)
         tables.append(data)
-    table1 = pd.concat(tables, keys=demographics, names=["Attribute"])
+    table1 = pd.concat(tables, keys=demographic_subset, names=["Attribute"])
     # TODO: print warning if table is empty?
     if not table1.empty:
         table1 = get_percentages(table1)

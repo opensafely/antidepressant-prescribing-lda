@@ -28,7 +28,7 @@ from config import (
     start_date,
     end_date,
     demographics,
-    lda_measures,
+    lda_subgroups,
 )
 
 from demographic_variables import demographic_variables
@@ -52,10 +52,8 @@ study = StudyDefinition(
         """
         gms_registration_status AND
         age_band != "Unknown" AND
-        (sex = "M" OR sex = "F") AND
-        (ld OR autism)
+        (sex = "M" OR sex = "F")
         """,
-        # Learning disabilities already in demographic vars
     ),
     # Common demographic variables
     **demographic_variables,
@@ -289,33 +287,29 @@ study = StudyDefinition(
         new_antidepressant_other
         """,
     ),
-    # Prescribed without a diagnosis within the last 2 years
-    # TODO: should we allow for some time in the days following the rx?
-    rx_no_diagnosis=patients.satisfying(
-        """
-        antidepressant_any AND
-        NOT diag_2yr
-        """,
-        diag_2yr=patients.with_these_clinical_events(
-            codelist=depression_codes,
-            returning="binary_flag",
-            find_last_match_in_period=True,
-            between=[
-                "first_day_of_month(index_date) - 2 years",
-                "last_day_of_month(index_date)",
-            ],
-            return_expectations={"incidence": 0.01},
-        ),
-    )
 )
 
-# TODO: Small number suppression may be overly stringent for decile charts
-# See: https://github.com/opensafely-core/cohort-extractor/issues/759
-# When running, we should check how much is redacted
-# Using tested code now rather than custom decile chart redaction code
-
 # --- DEFINE MEASURES ---
+
+##  QOF Measures
+
 measures = [
+    # Depression register
+    Measure(
+        id="register_total_rate",
+        numerator="depression_register",
+        denominator="depression_list_type",
+        group_by=["population"],
+        small_number_suppression=True,
+    ),
+    # Depression register by practice
+    # Do not need small number suppression b/c we use the decile table
+    Measure(
+        id="register_practice_rate",
+        numerator="depression_register",
+        denominator="depression_list_type",
+        group_by=["practice"],
+    ),
     # QOF achievement over the population
     # This will be restricted to the 18+ population
     Measure(
@@ -325,14 +319,37 @@ measures = [
         group_by=["population"],
         small_number_suppression=True,
     ),
+    # QOF achievement by practice
+    # Do not need small number suppression b/c we use the decile table
     Measure(
-        id="rx_no_diag_total_rate",
-        numerator="rx_no_diagnosis",
-        denominator="population",
-        group_by=["population"],
-        small_number_suppression=True,
+        id="dep003_practice_rate",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
+        group_by=["practice"],
     ),
 ]
+
+# QOF register/achievement by each demographic in the config file
+for d in demographics:
+    m = Measure(
+        id="register_{}_rate".format(d),
+        numerator="depression_register",
+        denominator="depression_list_type",
+        group_by=[d],
+        small_number_suppression=True,
+    )
+    measures.append(m)
+    m = Measure(
+        id="dep003_{}_rate".format(d),
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
+        group_by=[d],
+        small_number_suppression=True,
+    )
+    measures.append(m)
+
+
+## Prescribing measures
 outcomes = [
     "depression",
     "antidepressant_ssri",
@@ -340,52 +357,37 @@ outcomes = [
     "antidepressant_other",
     "antidepressant_any",
 ]
-for o in outcomes:
-    # Total population rate by outcome
-    m = Measure(
-        id="{}_total_rate".format(o),
-        numerator=o,
-        denominator="population",
-        group_by=["population"],
-        small_number_suppression=True,
-    )
-    measures.append(m)
-    new_m = Measure(
-        id="new_{}_total_rate".format(o),
-        numerator="new_{}".format(o),
-        denominator="population",
-        group_by=["population"],
-        small_number_suppression=True,
-    )
-    measures.append(new_m)
 
+for o in outcomes:
     # Group rate by outcome
-    for group in lda_measures:
+    for group_label, group in lda_subgroups.items():
         m = Measure(
-            id="{}_{}_rate".format(o, group),
+            id="{}_{}_total_rate".format(o, group_label),
             numerator=o,
-            denominator="population",
-            group_by=[group],
+            denominator=group,
+            group_by=["population"],
             small_number_suppression=True,
         )
         measures.append(m)
         new_m = Measure(
-            id="new_{}_{}_rate".format(o, group),
+            id="new_{}_{}_total_rate".format(o, group_label),
             numerator="new_{}".format(o),
-            denominator="population",
-            group_by=[group],
+            denominator=group,
+            group_by=["population"],
             small_number_suppression=True,
         )
         measures.append(new_m)
 
-# Any current antidepressant by demographic subgroup for Table1
-# Use the measures framework for consistent small number suppression
-for d in demographics:
-    m = Measure(
-        id="antidepressant_any_{}_rate".format(d),
-        numerator="antidepressant_any",
-        denominator="population",
-        group_by=[d],
-        small_number_suppression=True,
-    )
-    measures.append(m)
+# Demographic trends in prescribing for each at-risk group
+# Use a set difference because there are some categories that are both
+# lda subgroups and demographic groups
+for group_label, group in lda_subgroups.items():
+    for d in list(set(demographics) - set(lda_subgroups.keys())):
+        m = Measure(
+            id="antidepressant_any_{}_{}_rate".format(group_label, d),
+            numerator="antidepressant_any",
+            denominator=group,
+            group_by=[d],
+            small_number_suppression=True,
+        )
+        measures.append(m)

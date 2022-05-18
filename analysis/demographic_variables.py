@@ -72,7 +72,7 @@ demographic_variables = dict(
             "5 - least deprived": """index_of_multiple_deprivation >= 32844*4/5 """,
         },
         index_of_multiple_deprivation=patients.address_as_of(
-            "index_date",
+            "last_day_of_month(index_date)",
             returning="index_of_multiple_deprivation",
             round_to_nearest=100,
         ),
@@ -112,18 +112,18 @@ demographic_variables = dict(
         },
     ),
     # Learning disability
+    ld=patients.with_these_clinical_events(
+        learning_disability_codes,
+        on_or_before="last_day_of_month(index_date)",
+        returning="binary_flag",
+        return_expectations={"incidence": 0.2},
+    ),
     learning_disability=patients.categorised_as(
         {
             "Unknown": "DEFAULT",
             "No record of learning disability": "ld='0'",
             "Record of learning disability": "ld='1'",
         },
-        ld=patients.with_these_clinical_events(
-            learning_disability_codes,
-            on_or_before="last_day_of_month(index_date)",
-            returning="binary_flag",
-            return_expectations={"incidence": 0.2},
-        ),
         return_expectations={
             "rate": "universal",
             "category": {
@@ -136,18 +136,18 @@ demographic_variables = dict(
         },
     ),
     # Autism
+    aut=patients.with_these_clinical_events(
+        autism_codes,
+        on_or_before="last_day_of_month(index_date)",
+        returning="binary_flag",
+        return_expectations={"incidence": 0.3},
+    ),
     autism=patients.categorised_as(
         {
             "Unknown": "DEFAULT",
             "No record of autism": "aut='0'",
             "Record of autism": "aut='1'",
         },
-        aut=patients.with_these_clinical_events(
-            autism_codes,
-            on_or_before="index_date",
-            returning="binary_flag",
-            return_expectations={"incidence": 0.3},
-        ),
         return_expectations={
             "rate": "universal",
             "category": {

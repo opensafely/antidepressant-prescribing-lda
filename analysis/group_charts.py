@@ -6,6 +6,7 @@ import glob
 import pandas
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from dateutil import parser
 
 MEASURE_FNAME_REGEX = re.compile(r"measure_(?P<id>\w+)\.csv")
@@ -44,21 +45,53 @@ def drop_zero_denominator_rows(measure_table):
     return measure_table[mask].reset_index(drop=True)
 
 
-def get_group_chart(measure_table, date_lines=None):
+def scale_thousand(ax):
+    """
+    Scale a proportion for rate by 1000
+    Used for y axis display
+    """
+    def thousand_formatter(x, pos):
+        return f"{x*1000: .0f}"
+
+    ax.yaxis.set_major_formatter(FuncFormatter(thousand_formatter))
+    ax.set_ylabel("Rate per thousand")
+
+
+def scale_hundred(ax):
+    """
+    Scale a proportion for percentage
+    Used for y axis display
+    """
+    def hundred_formatter(x, pos):
+        return f"{x*100: .0f}"
+
+    ax.yaxis.set_major_formatter(FuncFormatter(hundred_formatter))
+    ax.set_ylabel("Percentage")
+
+
+def get_group_chart(measure_table, date_lines=None, scale=None):
     # TODO: do not hard code date and value
     plt.figure()
+    fig, ax = plt.subplots()
     measure_table.set_index("date", inplace=True)
-    if len(measure_table.attrs["group_by"])==0 or "total" in measure_table.attrs["id"]:
-        measure_table.value.plot(legend=None)
+    if (
+        len(measure_table.attrs["group_by"]) == 0
+        or "total" in measure_table.attrs["id"]
+    ):
+        measure_table.value.plot(legend=None, ax=ax)
     else:
         measure_table.groupby(measure_table.attrs["group_by"]).value.plot(
-            legend=True
+            legend=False, ax=ax
         )
         plt.legend(
             bbox_to_anchor=(1.05, 1.0), loc="upper left", fontsize="small"
         )
     if date_lines:
         add_date_lines(plt, date_lines)
+    if scale == "percentage":
+        scale_hundred(ax)
+    elif scale == "rate":
+        scale_thousand(ax)
     plt.tight_layout()
     return plt
 
@@ -105,6 +138,8 @@ def parse_args():
         nargs="+",
         help="Vertical date lines",
     )
+    choices = ["percentage", "rate"]
+    parser.add_argument("--scale", default=None, choices=choices)
     return parser.parse_args()
 
 
@@ -113,13 +148,17 @@ def main():
     input_files = args.input_files
     output_dir = args.output_dir
     date_lines = args.date_lines
+    scale = args.scale
 
     for measure_table in get_measure_tables(input_files):
         measure_table = drop_zero_denominator_rows(measure_table)
-        chart = get_group_chart(measure_table, date_lines=date_lines)
+        chart = get_group_chart(
+            measure_table, date_lines=date_lines, scale=scale
+        )
         id_ = measure_table.attrs["id"]
         fname = f"group_chart_{id_}.png"
         write_group_chart(chart, output_dir / fname)
+        chart.close()
 
 
 if __name__ == "__main__":
