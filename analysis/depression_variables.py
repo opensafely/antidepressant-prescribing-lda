@@ -185,6 +185,37 @@ depression_indicator_variables = dict(
 )
 
 dep003_variables = dict(
+    **depression_indicator_variables,
+
+    # Output exclusions for demographic breakdowns
+
+    # Reject patients passed to this rule for whom depression quality
+    # indicator care has been identified as unsuitable for the patient in
+    # the 12 months leading up to and including the payment period end
+    # date. Pass all remaining patients to the next rule.
+    dep003_denominator_r4=patients.satisfying(
+        """
+        NOT unsuitable_12mo
+        """,
+    ),
+    # Reject patients passed to this rule who chose not to receive
+    # depression quality indicator care in the 12 months leading up to and
+    # including the payment period end date. Pass all remaining patients
+    # to the next rule.
+    dep003_denominator_r5=patients.satisfying(
+        """
+        NOT dissent_12mo
+        """,
+    ),
+    # Reject patients passed to this rule who have not responded to at
+    # least two depression care review invitations, made at least 7 days
+    # apart, in the 12 months leading up to and including the payment
+    # period end date. Pass all remaining patients to the next rule.
+    dep003_denominator_r6=patients.satisfying(
+        """
+        NOT (depr_invite_1 AND depr_invite_2 AND NOT review_10_to_56d)
+        """,
+    ),
     dep003_denominator=patients.satisfying(
         """
         depression_register AND
@@ -202,7 +233,6 @@ dep003_variables = dict(
             )
         )
         """,
-        **depression_indicator_variables,
         # Reject patients from the specified population who had their latest
         # episode of depression at least 15 months before the payment period
         # end date. Pass all remaining patients to the next rule.
@@ -225,33 +255,6 @@ dep003_variables = dict(
         dep003_denominator_r3=patients.satisfying(
             """
             review_10_to_56d
-            """,
-        ),
-        # Reject patients passed to this rule for whom depression quality
-        # indicator care has been identified as unsuitable for the patient in
-        # the 12 months leading up to and including the payment period end
-        # date. Pass all remaining patients to the next rule.
-        dep003_denominator_r4=patients.satisfying(
-            """
-            NOT unsuitable_12mo
-            """,
-        ),
-        # Reject patients passed to this rule who chose not to receive
-        # depression quality indicator care in the 12 months leading up to and
-        # including the payment period end date. Pass all remaining patients
-        # to the next rule.
-        dep003_denominator_r5=patients.satisfying(
-            """
-            NOT dissent_12mo
-            """,
-        ),
-        # Reject patients passed to this rule who have not responded to at
-        # least two depression care review invitations, made at least 7 days
-        # apart, in the 12 months leading up to and including the payment
-        # period end date. Pass all remaining patients to the next rule.
-        dep003_denominator_r6=patients.satisfying(
-            """
-            NOT (depr_invite_1 AND depr_invite_2 AND NOT review_10_to_56d)
             """,
         ),
         # Reject patients passed to this rule whose depression diagnosis was in

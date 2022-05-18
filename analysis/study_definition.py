@@ -329,7 +329,8 @@ measures = [
     ),
 ]
 
-# QOF register/achievement by each demographic in the config file
+exclusions = ["dep003_denominator_r4", "dep003_denominator_r5", "dep003_denominator_r6"]
+# QOF register/achievement/exclusions by each demographic in the config file
 for d in demographics:
     m = Measure(
         id="register_{}_rate".format(d),
@@ -347,6 +348,15 @@ for d in demographics:
         small_number_suppression=True,
     )
     measures.append(m)
+    for exclusion in exclusions:
+        m = Measure(
+            id="dep003_{}_{}_rate".format(exclusion, d),
+            numerator=exclusion,
+            denominator="depression_register",
+            group_by=[d],
+            small_number_suppression=True,
+        )
+        measures.append(m)
 
 
 ## Prescribing measures
