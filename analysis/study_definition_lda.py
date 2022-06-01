@@ -293,71 +293,7 @@ study = StudyDefinition(
 
 ##  QOF Measures
 
-measures = [
-    # Depression register
-    Measure(
-        id="register_total_rate",
-        numerator="depression_register",
-        denominator="depression_list_type",
-        group_by=["population"],
-        small_number_suppression=True,
-    ),
-    # Depression register by practice
-    # Do not need small number suppression b/c we use the decile table
-    Measure(
-        id="register_practice_rate",
-        numerator="depression_register",
-        denominator="depression_list_type",
-        group_by=["practice"],
-    ),
-    # QOF achievement over the population
-    # This will be restricted to the 18+ population
-    Measure(
-        id="dep003_total_rate",
-        numerator="dep003_numerator",
-        denominator="dep003_denominator",
-        group_by=["population"],
-        small_number_suppression=True,
-    ),
-    # QOF achievement by practice
-    # Do not need small number suppression b/c we use the decile table
-    Measure(
-        id="dep003_practice_rate",
-        numerator="dep003_numerator",
-        denominator="dep003_denominator",
-        group_by=["practice"],
-    ),
-]
-
-exclusions = ["dep003_denominator_r4", "dep003_denominator_r5", "dep003_denominator_r6"]
-# QOF register/achievement/exclusions by each demographic in the config file
-for d in demographics:
-    m = Measure(
-        id="register_{}_rate".format(d),
-        numerator="depression_register",
-        denominator="depression_list_type",
-        group_by=[d],
-        small_number_suppression=True,
-    )
-    measures.append(m)
-    m = Measure(
-        id="dep003_{}_rate".format(d),
-        numerator="dep003_numerator",
-        denominator="dep003_denominator",
-        group_by=[d],
-        small_number_suppression=True,
-    )
-    measures.append(m)
-    for exclusion in exclusions:
-        m = Measure(
-            id="dep003_{}_{}_rate".format(exclusion, d),
-            numerator=exclusion,
-            denominator="depression_register",
-            group_by=[d],
-            small_number_suppression=True,
-        )
-        measures.append(m)
-
+measures = []
 
 ## Prescribing measures
 outcomes = [
@@ -369,35 +305,79 @@ outcomes = [
 ]
 
 for o in outcomes:
+    m = Measure(
+        id=f"{o}_total_rate",
+        numerator=o,
+        denominator="population",
+        group_by="population",
+        small_number_suppression=True,
+    )
+    measures.append(m)
+    new_m = Measure(
+        id=f"new_{o}_total_rate",
+        numerator=f"new_{o}",
+        denominator="population",
+        group_by="population",
+        small_number_suppression=True,
+    )
+    measures.append(new_m)
     # Group rate by outcome
     for group_label, group in lda_subgroups.items():
         m = Measure(
-            id="{}_{}_total_rate".format(o, group_label),
+            id=f"{o}_{group_label}_total_rate",
             numerator=o,
-            denominator=group,
-            group_by=["population"],
+            denominator="population",
+            group_by=[group],
             small_number_suppression=True,
         )
         measures.append(m)
         new_m = Measure(
-            id="new_{}_{}_total_rate".format(o, group_label),
-            numerator="new_{}".format(o),
-            denominator=group,
-            group_by=["population"],
+            id=f"new_{o}_{group_label}_total_rate",
+            numerator=f"new_{o}",
+            denominator="population",
+            group_by=[group],
             small_number_suppression=True,
         )
         measures.append(new_m)
 
+# QOF Depression by lda subgroup
+# TODO: potentially also duplicated dep003_total measures
+for group_label, group in lda_subgroups.items():
+    m = Measure(
+        id=f"register_{group_label}_total_rate",
+        numerator="depression_register",
+        denominator="depression_list_type",
+        group_by=[group],
+        small_number_suppression=True,
+    )
+    measures.append(m)
+    m = Measure(
+        id=f"dep003_{group_label}_total_rate",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
+        group_by=[group],
+        small_number_suppression=True,
+    )
+    measures.append(m)
+
 # Demographic trends in prescribing for each at-risk group
 # Use a set difference because there are some categories that are both
 # lda subgroups and demographic groups
-for group_label, group in lda_subgroups.items():
-    for d in list(set(demographics) - set(lda_subgroups.keys())):
+for d in list(set(demographics) - set(lda_subgroups.keys())):
+    m = Measure(
+        id="antidepressant_any_all_{}_rate".format(d),
+        numerator="antidepressant_any",
+        denominator="population",
+        group_by=[d],
+        small_number_suppression=True,
+    )
+    measures.append(m)
+    for group_label, group in lda_subgroups.items():
         m = Measure(
             id="antidepressant_any_{}_{}_rate".format(group_label, d),
             numerator="antidepressant_any",
-            denominator=group,
-            group_by=[d],
+            denominator="population",
+            group_by=[group, d],
             small_number_suppression=True,
         )
         measures.append(m)
