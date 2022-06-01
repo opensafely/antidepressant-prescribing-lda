@@ -53,7 +53,6 @@ measures = [
         numerator="depression_register",
         denominator="population",
         group_by=["practice"],
-        small_number_suppression=True,
     ),
 ]
 # Register prevalence by each demographic in the config file
