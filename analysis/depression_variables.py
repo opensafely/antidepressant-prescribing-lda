@@ -38,35 +38,37 @@ depression_register_variables = dict(
         age_band != "Unknown"
         """,
     ),
+    # Date of the latest first or new episode of depression up to and
+    # including the achievement date.
+    latest_depression_date=patients.with_these_clinical_events(
+        between=[
+            depr_register_date,
+            "last_day_of_month(index_date)",
+        ],
+        codelist=depression_codes,
+        returning="date",
+        find_last_match_in_period=True,
+        date_format="YYYY-MM-DD",
+    ),
+    # Date of the most recent depression resolved code recorded after the
+    # most recent depression diagnosis and up to and including the
+    # achievement date.
+    latest_depression_resolved=patients.with_these_clinical_events(
+        codelist=depression_resolved_codes,
+        between=[
+            "latest_depression_date",
+            "last_day_of_month(index_date)",
+        ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+        returning="binary_flag",
+    ),
     depression_register=patients.satisfying(
         """
         depression_list_type AND
         latest_depression_date AND
         NOT latest_depression_resolved
         """,
-        # Date of the latest first or new episode of depression up to and
-        # including the achievement date.
-        latest_depression_date=patients.with_these_clinical_events(
-            between=[
-                depr_register_date,
-                "last_day_of_month(index_date)",
-            ],
-            codelist=depression_codes,
-            returning="date",
-            find_last_match_in_period=True,
-            date_format="YYYY-MM-DD",
-        ),
-        # Date of the most recent depression resolved code recorded after the
-        # most recent depression diagnosis and up to and including the
-        # achievement date.
-        latest_depression_resolved=patients.with_these_clinical_events(
-            codelist=depression_resolved_codes,
-            between=[
-                "latest_depression_date",
-                "last_day_of_month(index_date)",
-            ],
-            returning="binary_flag",
-        ),
     ),
 )
 
@@ -117,6 +119,8 @@ depression_indicator_variables = dict(
             "first_day_of_month(index_date) - 11 months",
             "last_day_of_month(index_date)",
         ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.01},
     ),
     # The most recent date that depression quality indicator care was
@@ -165,6 +169,8 @@ depression_indicator_variables = dict(
             "first_day_of_month(index_date) - 11 months",
             "depr_invite_2_date - 7 days",
         ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.01},
     ),
     # Date variable: depression diagnosis in the last 3 months
@@ -187,9 +193,7 @@ depression_indicator_variables = dict(
 
 dep003_variables = dict(
     **depression_indicator_variables,
-
     # Output exclusions for demographic breakdowns
-
     # Reject patients passed to this rule for whom depression quality
     # indicator care has been identified as unsuitable for the patient in
     # the 12 months leading up to and including the payment period end
@@ -227,10 +231,10 @@ dep003_variables = dict(
             dep003_denominator_r3
             OR
             (
-                dep003_denominator_r4 AND
-                dep003_denominator_r5 AND
-                dep003_denominator_r6 AND
-                dep003_denominator_r7 AND
+                dep003_denominator_r4 OR
+                dep003_denominator_r5 OR
+                dep003_denominator_r6 OR
+                dep003_denominator_r7 OR
                 dep003_denominator_r8
             )
         )
@@ -277,10 +281,10 @@ dep003_variables = dict(
         # NOTE: reject changed to select
         dep003_denominator_r8=patients.satisfying(
             """
-            registered_3mo
+            NOT registered_3mo
             """,
         ),
-        return_expectations={"incidence": 0.8}
+        return_expectations={"incidence": 0.8},
     ),
     dep003_numerator=patients.satisfying(
         """
