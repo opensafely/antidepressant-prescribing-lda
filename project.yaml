@@ -75,7 +75,7 @@ actions:
             --output-dir output/qof/joined/python
     needs: [join_cohorts_qof]
     outputs:
-      moderately_sensitive:
+      highly_sensitive:
         cohort: output/qof/joined/python/input_*.csv.gz
 
   generate_mismatch_counts:
