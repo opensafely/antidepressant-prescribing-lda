@@ -66,6 +66,29 @@ actions:
         cohort: output/lda/joined/input_*.csv.gz
 
   ####################
+  # Python testing
+  ####################
+  generate_study_population_python:
+    run: >
+            python:latest python analysis/python_variables.py
+            --input-files output/qof/joined/input_*.csv.gz
+            --output-dir output/qof/joined/python
+    needs: [join_cohorts_qof]
+    outputs:
+      moderately_sensitive:
+        cohort: output/qof/joined/python/input_*.csv.gz
+
+  generate_mismatch_counts:
+    run: >
+            python:latest python analysis/test_python.py
+            --input-files output/qof/joined/python/input_*.csv.gz
+            --output-dir output/qof/joined/python
+    needs: [generate_study_population_python]
+    outputs:
+      moderately_sensitive:
+        cohort: output/qof/joined/python/mismatch_*.csv.gz
+
+  ####################
   # Measures
   ####################
 
