@@ -193,14 +193,44 @@ depression_indicator_variables = dict(
 
 dep003_variables = dict(
     **depression_indicator_variables,
-    # Output exclusions for demographic breakdowns
+    # Reject patients from the specified population who had their latest
+    # episode of depression at least 15 months before the payment period
+    # end date. Pass all remaining patients to the next rule.
+    # NOTE: reject changed to select
+    dep003_denominator_r1=patients.satisfying(
+        """
+        depression_register AND
+        depression_15mo
+        """,
+    ),
+    # Reject patients passed to this rule who had their depression review
+    # at least 12 months before the payment period end date. Pass all
+    # remaining patients to the next rule.
+    # NOTE: reject changed to select
+    dep003_denominator_r2=patients.satisfying(
+        """
+        dep003_denominator_r1 AND
+        (review_12mo OR NOT ever_review)
+        """,
+    ),
+    # Select patients passed to this rule who had a depression review within
+    # the period from 10 to 56 days after the patients latest episode of
+    # depression. Pass all remaining patients to the next rule.
+    # NOTE: select
+    dep003_denominator_r3=patients.satisfying(
+        """
+        dep003_denominator_r2 AND
+        review_10_to_56d
+        """,
+    ),
     # Reject patients passed to this rule for whom depression quality
     # indicator care has been identified as unsuitable for the patient in
     # the 12 months leading up to and including the payment period end
     # date. Pass all remaining patients to the next rule.
     dep003_denominator_r4=patients.satisfying(
         """
-        NOT unsuitable_12mo
+        dep003_denominator_r2 AND
+        (NOT unsuitable_12mo)
         """,
     ),
     # Reject patients passed to this rule who chose not to receive
@@ -209,6 +239,7 @@ dep003_variables = dict(
     # to the next rule.
     dep003_denominator_r5=patients.satisfying(
         """
+        dep003_denominator_r4 AND
         NOT dissent_12mo
         """,
     ),
@@ -218,78 +249,41 @@ dep003_variables = dict(
     # period end date. Pass all remaining patients to the next rule.
     dep003_denominator_r6=patients.satisfying(
         """
+        dep003_denominator_r5 AND
         NOT (depr_invite_1 AND depr_invite_2 AND NOT review_10_to_56d)
         """,
     ),
-    # TODO: potential issue with r8 "select remaining"
+    # Reject patients passed to this rule whose depression diagnosis was in
+    # the 3 months leading up to and including the payment period end date.
+    # Pass all remaining patients to the next rule.
+    # NOTE: reject changed to select
+    dep003_denominator_r7=patients.satisfying(
+        """
+        dep003_denominator_r6 AND
+        NOT depression_3mo
+        """,
+    ),
+    # Reject patients passed to this rule who registered with the GP practice
+    # in the 3 month period leading up to and including the payment period end
+    # date. Select the remaining patients.
+    # NOTE: reject changed to select
+    dep003_denominator_r8=patients.satisfying(
+        """
+        dep003_denominator_r7 AND
+        NOT registered_3mo
+        """,
+    ),
     dep003_denominator=patients.satisfying(
         """
-        depression_register AND
-        dep003_denominator_r1 AND
-        dep003_denominator_r2 AND
-        (
-            dep003_denominator_r3
-            OR
-            (
-                dep003_denominator_r4 OR
-                dep003_denominator_r5 OR
-                dep003_denominator_r6 OR
-                dep003_denominator_r7 OR
-                dep003_denominator_r8
-            )
-        )
+        dep003_denominator_r3 OR
+        dep003_denominator_r8
         """,
-        # Reject patients from the specified population who had their latest
-        # episode of depression at least 15 months before the payment period
-        # end date. Pass all remaining patients to the next rule.
-        # NOTE: reject changed to select
-        dep003_denominator_r1=patients.satisfying(
-            """
-            depression_15mo
-            """,
-        ),
-        # Reject patients passed to this rule who had their depression review
-        # at least 12 months before the payment period end date. Pass all
-        # remaining patients to the next rule.
-        # NOTE: reject changed to select
-        dep003_denominator_r2=patients.satisfying(
-            """
-            review_12mo OR NOT ever_review
-            """,
-        ),
-        # Select patients passed to this rule who had a depression review within
-        # the period from 10 to 56 days after the patients latest episode of
-        # depression. Pass all remaining patients to the next rule.
-        # NOTE: select
-        dep003_denominator_r3=patients.satisfying(
-            """
-            review_10_to_56d
-            """,
-        ),
-        # Reject patients passed to this rule whose depression diagnosis was in
-        # the 3 months leading up to and including the payment period end date.
-        # Pass all remaining patients to the next rule.
-        # NOTE: reject changed to select
-        dep003_denominator_r7=patients.satisfying(
-            """
-            NOT depression_3mo
-            """,
-        ),
-        # Reject patients passed to this rule who registered with the GP practice
-        # in the 3 month period leading up to and including the payment period end
-        # date. Select the remaining patients.
-        # NOTE: reject changed to select
-        dep003_denominator_r8=patients.satisfying(
-            """
-            NOT registered_3mo
-            """,
-        ),
         return_expectations={"incidence": 0.8},
     ),
     dep003_numerator=patients.satisfying(
         """
         dep003_denominator AND
-        dep003_denominator_r3
+        review_10_to_56d
         """,
         return_expectations={"incidence": 0.6},
     ),
