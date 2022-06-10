@@ -269,7 +269,7 @@ dep003_variables = dict(
     dep003_denominator_r8=patients.satisfying(
         """
         dep003_denominator_r7 AND
-        NOT registered_3mo
+        registered_3mo
         """,
     ),
     dep003_denominator=patients.satisfying(
