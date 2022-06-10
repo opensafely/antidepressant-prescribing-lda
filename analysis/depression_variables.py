@@ -199,7 +199,6 @@ dep003_variables = dict(
     # NOTE: reject changed to select
     dep003_denominator_r1=patients.satisfying(
         """
-        depression_register AND
         depression_15mo
         """,
     ),
