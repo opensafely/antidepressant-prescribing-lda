@@ -229,6 +229,7 @@ dep003_variables = dict(
     dep003_denominator_r4=patients.satisfying(
         """
         dep003_denominator_r2 AND
+        (NOT dep003_denominator_r3) AND
         (NOT unsuitable_12mo)
         """,
     ),
