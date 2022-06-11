@@ -247,10 +247,11 @@ dep003_variables = dict(
     # least two depression care review invitations, made at least 7 days
     # apart, in the 12 months leading up to and including the payment
     # period end date. Pass all remaining patients to the next rule.
+    # NOTE: the way the invites are written, we need to check invite 1
     dep003_denominator_r6=patients.satisfying(
         """
         dep003_denominator_r5 AND
-        NOT (depr_invite_1 AND depr_invite_2 AND NOT review_10_to_56d)
+        NOT depr_invite_1
         """,
     ),
     # Reject patients passed to this rule whose depression diagnosis was in
