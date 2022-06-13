@@ -8,11 +8,12 @@ import pandas
 
 
 def add_register(df):
-    df["depression_register_python"] = (
-        df["depression_list_type"]
-        & df["latest_depression_date"].notnull()
-        & lt(
-            df["latest_depression_resolved_date"], df["latest_depression_date"]
+    df["depression_register_python"] = df["depression_list_type"] & (
+        (df["depr"] & ~df["depr_res"])
+        | (
+            df["depr"]
+            & df["depr_res"]
+            & lte(df["depr_res_date"], df["depr_lat_date"])
         )
     )
     return df
@@ -40,25 +41,10 @@ def add_dep003(df):
     Reject patients passed to this rule who have not responded to at least two depression care review invitations, made at least 7 days apart, in the 12 months leading up to and including the payment period end date. Pass all remaining patients to the next rule
     """
     # TODO: Should we break this down further and get the dates a different way?
-    df["dep003_denominator_r6_python"] = (
-        df["depr_invite_1_date"].notnull() & df["depr_invite_2_date"].notnull()
+    df["dep003_denominator_r6_python"] = df["dep003_denominator_r5"] & ~(
+        df["depr_invite_1"] & df["depr_invite_2"]
     )
 
-    df["dep003_denominator_python"] = df["depression_15mo"] & (
-        df["review_12mo"] | ~df["ever_review"]
-    ) & df["review_10_to_56d_python"] | (
-        ~df["unsuitable_12mo"]
-        & ~df["dissent_12mo"]
-        & ~df["dep003_denominator_r6_python"]
-        & ~df["depression_3mo"]
-        & df["registered_3mo"]
-    )
-
-    df["dep003_numerator_python"] = (
-        df["depression_15mo"]
-        & (df["review_12mo"] | ~df["ever_review"])
-        & df["review_10_to_56d_python"]
-    )
     return df
 
 
