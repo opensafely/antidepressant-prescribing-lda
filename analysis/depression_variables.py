@@ -38,36 +38,50 @@ depression_register_variables = dict(
         age_band != "Unknown"
         """,
     ),
-    # Date of the latest first or new episode of depression up to and
-    # including the achievement date.
-    latest_depression_date=patients.with_these_clinical_events(
+    # Date of the latest episode of depression up to and including the
+    # achievement date.
+    depr_lat=patients.with_these_clinical_events(
         between=[
             depr_register_date,
             "last_day_of_month(index_date)",
         ],
         codelist=depression_codes,
-        returning="date",
+        returning="binary_flag",
         find_last_match_in_period=True,
+        include_date_of_match=True,
         date_format="YYYY-MM-DD",
     ),
-    # Date of the most recent depression resolved code recorded after the
-    # most recent depression diagnosis and up to and including the
+    # Date of the first episode of depression up to and including the
     # achievement date.
-    latest_depression_resolved=patients.with_these_clinical_events(
-        codelist=depression_resolved_codes,
+    depr=patients.with_these_clinical_events(
         between=[
-            "latest_depression_date",
+            depr_register_date,
             "last_day_of_month(index_date)",
         ],
+        codelist=depression_codes,
+        returning="binary_flag",
+        find_first_match_in_period=True,
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+    ),
+    # Date of the most recent depression resolved code
+    depr_res=patients.with_these_clinical_events(
+        codelist=depression_resolved_codes,
+        on_or_before="last_day_of_month(index_date)",
+        find_last_match_in_period=True,
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
         returning="binary_flag",
     ),
     depression_register=patients.satisfying(
         """
-        depression_list_type AND
-        latest_depression_date AND
-        NOT latest_depression_resolved
+        # Select patients from the specified population who have a diagnosis of
+        # depression which has not been subsequently resolved
+        (depr AND (NOT depr_res)) OR
+        (
+            (depr AND depr_res) AND
+            (depr_res_date <= depr_lat_date)
+        )
         """,
     ),
 )
@@ -146,28 +160,30 @@ depression_indicator_variables = dict(
         ],
         return_expectations={"incidence": 0.01},
     ),
-    # Date of the earliest invitation for a depression review recorded at least
-    # 7 days after the first invitation and up to and including the achievement
-    # date.
-    depr_invite_2=patients.with_these_clinical_events(
+    # Date of the earliest invitation for a depression review on or after the
+    # quality service start date and up to and including the achievement date.
+    depr_invite_1=patients.with_these_clinical_events(
         codelist=depression_invitation_codes,
         returning="binary_flag",
-        find_last_match_in_period=True,
+        find_first_match_in_period=True,
         between=[
             "first_day_of_month(index_date) - 11 months",
             "last_day_of_month(index_date)",
         ],
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
+        return_expectations={"incidence": 0.015},
     ),
-    # Date of the earliest invitation for a depression review on or after the
-    # quality service start date and up to and including the achievement date.
-    depr_invite_1=patients.with_these_clinical_events(
+    # Date of the earliest invitation for a depression review recorded at least
+    # 7 days after the first invitation and up to and including the achievement
+    # date.
+    depr_invite_2=patients.with_these_clinical_events(
         codelist=depression_invitation_codes,
         returning="binary_flag",
+        find_first_match_in_period=True,
         between=[
-            "first_day_of_month(index_date) - 11 months",
-            "depr_invite_2_date - 7 days",
+            "depr_invite_1_date + 7 days",
+            "last_day_of_month(index_date)",
         ],
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
@@ -247,11 +263,10 @@ dep003_variables = dict(
     # least two depression care review invitations, made at least 7 days
     # apart, in the 12 months leading up to and including the payment
     # period end date. Pass all remaining patients to the next rule.
-    # NOTE: the way the invites are written, we need to check invite 1
     dep003_denominator_r6=patients.satisfying(
         """
         dep003_denominator_r5 AND
-        NOT depr_invite_1
+        NOT (depr_invite_1 AND depr_invite_2)
         """,
     ),
     # Reject patients passed to this rule whose depression diagnosis was in
