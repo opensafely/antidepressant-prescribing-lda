@@ -99,6 +99,16 @@ actions:
       moderately_sensitive:
         cohort: output/qof/joined/python/mismatch_*.csv.gz
 
+  check_register:
+    run: >
+            python:latest python analysis/check_dates.py
+            --input-files output/qof/joined/input_register*.csv.gz
+            --output-dir output/qof/joined/python
+    needs: [join_cohorts_qof]
+    outputs:
+      moderately_sensitive:
+        cohort: output/qof/joined/python/dates_*.csv.gz
+
   ####################
   # Measures
   ####################
