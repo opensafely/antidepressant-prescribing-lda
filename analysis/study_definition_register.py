@@ -54,6 +54,13 @@ measures = [
         denominator="population",
         group_by=["practice"],
     ),
+    Measure(
+        id="register_code_rate",
+        numerator="depression_register",
+        denominator="population",
+        group_by=["depr_lat_code"],
+        small_number_suppression=True,
+    )
 ]
 # Register prevalence by each demographic in the config file
 for d in demographics:

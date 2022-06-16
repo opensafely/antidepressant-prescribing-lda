@@ -1,8 +1,8 @@
 # study start date.  should match date in project.yaml
-start_date = "2021-01-01"
+start_date = "2020-01-01"
 
 # study end date.  should match date in project.yaml
-end_date = "2021-03-01"
+end_date = "2020-03-01"
 
 # depression register start date
 depr_register_date = "2006-04-01"
