@@ -5,12 +5,15 @@ import glob
 import pathlib
 import pandas
 
-def check_register_dates(df):
+def check_register_dates(df, depression_codes_2019):
     before_2006 = df["depression_register"] & (pandas.to_datetime(df["depr_lat_date"]) < pandas.to_datetime("2006-04-01"))
     resolved = df["depression_register"] & df["depr_res"] & df["depr_lat"] & (gt(pandas.to_datetime(df["depr_res_date"]), pandas.to_datetime(df["depr_lat_date"])))
     under_18 = df["depression_register"] & (df["age"] < 18)
     resolved_same_day = df["depression_register"] & df["depr_lat"] & df["depr_res"] & (df["depr_lat_date"] == df["depr_res_date"])
-    output = {"before_2006": before_2006.sum(), "resolved": resolved.sum(), "under_18": under_18.sum(), "resolved_same_day": resolved_same_day.sum()}
+
+    v42_codes = df["depression_register"] & df["depr_lat_code"].isin(depression_codes_2019.index)
+
+    output = {"before_2006": before_2006.sum(), "resolved": resolved.sum(), "under_18": under_18.sum(), "resolved_same_day": resolved_same_day.sum(), "v42_codes" : v42_codes.sum()}
     return pandas.DataFrame(list(output.items()))
 
 def get_extension(path):
@@ -75,10 +78,12 @@ def main():
     input_files = args.input_files
     output_dir = args.output_dir
 
+    depression_codes_2019 = read_dataframe(pathlib.Path("codelists/user-ccunningham-depr_cod_qof_v042.csv")).set_index("code")
+
     output_dir.mkdir(exist_ok=True)
     for input_table in get_input_table(input_files):
         fname = input_table.attrs["fname"]
-        date_counts = check_register_dates(input_table)
+        date_counts = check_register_dates(input_table, depression_codes_2019)
         write_input_table(date_counts, output_dir / fname)
 
 
