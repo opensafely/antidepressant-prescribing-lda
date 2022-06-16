@@ -51,6 +51,20 @@ depression_register_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
     ),
+    depr_lat_code=patients.with_these_clinical_events(
+        between=[
+            depr_register_date,
+            "last_day_of_month(index_date)",
+        ],
+        codelist=depression_codes,
+        returning="code",
+        find_last_match_in_period=True,
+        return_expectations={
+            "category":{
+                "ratios": {"10": 0.2, "11": 0.3, "12": 0.5}
+            }
+        }
+    ),
     # Date of the first episode of depression up to and including the
     # achievement date.
     depr=patients.with_these_clinical_events(
@@ -80,7 +94,7 @@ depression_register_variables = dict(
         (depr AND (NOT depr_res)) OR
         (
             (depr AND depr_res) AND
-            (depr_res_date <= depr_lat_date)
+            (depr_res_date < depr_lat_date)
         )
         """,
     ),

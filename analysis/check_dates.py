@@ -6,10 +6,10 @@ import pathlib
 import pandas
 
 def check_register_dates(df):
-    before_2006 = df["depression_register"] & (pandas.to_datetime(df["depr_lat_date"]) <= pandas.to_datetime("2006-04-01"))
+    before_2006 = df["depression_register"] & (pandas.to_datetime(df["depr_lat_date"]) < pandas.to_datetime("2006-04-01"))
     resolved = df["depression_register"] & df["depr_res"] & df["depr_lat"] & (gt(pandas.to_datetime(df["depr_res_date"]), pandas.to_datetime(df["depr_lat_date"])))
     under_18 = df["depression_register"] & (df["age"] < 18)
-    resolved_same_day = df["depr_lat"] & df["depr_res"] & (df["depr_lat_date"] == df["depr_res_date"])
+    resolved_same_day = df["depression_register"] & df["depr_lat"] & df["depr_res"] & (df["depr_lat_date"] == df["depr_res_date"])
     output = {"before_2006": before_2006.sum(), "resolved": resolved.sum(), "under_18": under_18.sum(), "resolved_same_day": resolved_same_day.sum()}
     return pandas.DataFrame(list(output.items()))
 
