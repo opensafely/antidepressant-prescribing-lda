@@ -24,6 +24,12 @@
       "downloaded_at": "2022-01-28 12:03:04.974496Z",
       "sha": "fe8bce134ed68b81aee0a15f8f258bfb31fc0c1c"
     },
+    "user-ccunningham-depr_cod_qof_v042.csv": {
+      "id": "user/ccunningham/depr_cod_qof_v042/4af66f18",
+      "url": "https://codelists.opensafely.org/codelist/user/ccunningham/depr_cod_qof_v042/4af66f18/",
+      "downloaded_at": "2022-06-16 16:58:37.645946Z",
+      "sha": "748a22780ec7c3e7ba9970d9bd80841f07ae259d"
+    },
     "nhsd-primary-care-domain-refsets-depres_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/depres_cod/20200812",
       "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/depres_cod/20200812/",
