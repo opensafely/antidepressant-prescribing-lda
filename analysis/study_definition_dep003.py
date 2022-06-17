@@ -79,6 +79,19 @@ measures = [
         denominator="dep003_denominator",
         group_by=["practice"],
     ),
+    # Invitation codes
+    Measure(
+        id="dep003_invite_1_code_rate",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
+        group_by=["depr_invite_1_code"],
+    ),
+    Measure(
+        id="dep003_invite_2_code_rate",
+        numerator="dep003_numerator",
+        denominator="dep003_denominator",
+        group_by=["depr_invite_2_code"],
+    ),
 ]
 
 # QOF achievement by each demographic in the config file

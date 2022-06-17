@@ -91,6 +91,7 @@ depression_register_variables = dict(
         """
         # Select patients from the specified population who have a diagnosis of
         # depression which has not been subsequently resolved
+        depression_list_type AND
         (depr AND (NOT depr_res)) OR
         (
             (depr AND depr_res) AND
@@ -188,6 +189,20 @@ depression_indicator_variables = dict(
         date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.015},
     ),
+    depr_invite_1_code=patients.with_these_clinical_events(
+        codelist=depression_invitation_codes,
+        returning="code",
+        find_first_match_in_period=True,
+        between=[
+            "first_day_of_month(index_date) - 11 months",
+            "last_day_of_month(index_date)",
+        ],
+        return_expectations={
+            "category":{
+                "ratios": {"10": 0.2, "11": 0.3, "12": 0.5}
+            }
+        }
+    ),
     # Date of the earliest invitation for a depression review recorded at least
     # 7 days after the first invitation and up to and including the achievement
     # date.
@@ -202,6 +217,20 @@ depression_indicator_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.01},
+    ),
+    depr_invite_2_code=patients.with_these_clinical_events(
+        codelist=depression_invitation_codes,
+        returning="code",
+        find_first_match_in_period=True,
+        between=[
+            "depr_invite_1_date + 7 days",
+            "last_day_of_month(index_date)",
+        ],
+        return_expectations={
+            "category":{
+                "ratios": {"10": 0.2, "11": 0.3, "12": 0.5}
+            }
+        }
     ),
     # Date variable: depression diagnosis in the last 3 months
     depression_3mo=patients.with_these_clinical_events(
