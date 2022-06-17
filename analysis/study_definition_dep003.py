@@ -47,6 +47,7 @@ study = StudyDefinition(
     population=patients.satisfying(
         """
         (sex = "M" OR sex = "F") AND
+        depression_list_type AND
         depression_register
         """,
     ),

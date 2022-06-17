@@ -45,6 +45,11 @@ def check_register(df, depression_codes_2019):
 
 
 def check_indicator(df):
+    # Population
+    # Everyone on the register should be of depression list type
+    # NOTE: assert=0
+    population_1 = df["depression_register"] & ~df["depression_list_type"]
+
     # R1
     # Test that that r1 only includes those on the register
     # NOTE: assert=0
@@ -85,7 +90,7 @@ def check_indicator(df):
     # Note: assert=0
     # Test that r4 does not have anyone meeting the numerator
     # NOTE: assert=0
-    r4_1 = df["dep003_denominator_r4"] & ~df["review_10_to_56d"]
+    r4_1 = df["dep003_denominator_r4"] & df["review_10_to_56d"]
 
     # R6
     # Test that no one has invite 2 without 1
@@ -114,6 +119,7 @@ def check_indicator(df):
     numerator_1 = df["dep003_numerator"] & ~df["dep003_denominator"]
 
     output = {
+        "population_1": population_1.sum(),
         "r1_1": r1_1.sum(),
         "r1_2": r1_2.sum(),
         "r1_3": r1_3.sum(),
