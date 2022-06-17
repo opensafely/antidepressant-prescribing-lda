@@ -79,35 +79,15 @@ actions:
   ####################
   # Python testing
   ####################
-  generate_study_population_python:
+  test_input:
     run: >
-            python:latest python analysis/python_variables.py
+            python:latest python analysis/test_input.py
             --input-files output/qof/joined/input_*.csv.gz
             --output-dir output/qof/joined/python
     needs: [join_cohorts_qof]
     outputs:
-      highly_sensitive:
-        cohort: output/qof/joined/python/input_*.csv.gz
-
-  generate_mismatch_counts:
-    run: >
-            python:latest python analysis/test_python.py
-            --input-files output/qof/joined/python/input_*.csv.gz
-            --output-dir output/qof/joined/python
-    needs: [generate_study_population_python]
-    outputs:
       moderately_sensitive:
-        cohort: output/qof/joined/python/mismatch_*.csv.gz
-
-  check_register:
-    run: >
-            python:latest python analysis/check_dates.py
-            --input-files output/qof/joined/input_register*.csv.gz
-            --output-dir output/qof/joined/python
-    needs: [join_cohorts_qof]
-    outputs:
-      moderately_sensitive:
-        cohort: output/qof/joined/python/dates_*.csv.gz
+        cohort: output/qof/joined/python/test_*.csv
 
   ####################
   # Measures
