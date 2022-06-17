@@ -91,6 +91,7 @@ depression_register_variables = dict(
         """
         # Select patients from the specified population who have a diagnosis of
         # depression which has not been subsequently resolved
+        depression_list_type AND
         (depr AND (NOT depr_res)) OR
         (
             (depr AND depr_res) AND
