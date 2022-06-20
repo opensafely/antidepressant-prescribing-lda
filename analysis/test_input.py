@@ -205,7 +205,9 @@ def main():
         fname = input_table.attrs["fname"]
         # TODO: come up with a better way to do this
         if "dep003" in fname:
-            test_results = check_indicator(input_table)
+            register_results = check_register(input_table, depression_codes_2019)
+            indicator_results = check_indicator(input_table)
+            test_results = pandas.concat([register_results, indicator_results])
         elif "register" in fname:
             test_results = check_register(input_table, depression_codes_2019)
         else:
