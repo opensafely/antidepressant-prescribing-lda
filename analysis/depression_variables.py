@@ -256,8 +256,6 @@ depression_indicator_variables = dict(
     registered_3mo=patients.registered_with_one_practice_between(
         start_date="first_day_of_month(index_date) - 2 months",
         end_date="last_day_of_month(index_date)",
-        include_date_of_match=True,
-        date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.1},
     ),
 )
