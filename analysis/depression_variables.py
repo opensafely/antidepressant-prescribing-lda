@@ -141,6 +141,8 @@ depression_indicator_variables = dict(
     ever_review=patients.with_these_clinical_events(
         codelist=depression_review_codes,
         between=[depr_register_date, "last_day_of_month(index_date)"],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         returning="binary_flag",
     ),
     review_12mo=patients.with_these_clinical_events(
@@ -164,6 +166,8 @@ depression_indicator_variables = dict(
             "first_day_of_month(index_date) - 11 months",
             "last_day_of_month(index_date)",
         ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.01},
     ),
     # The most recent date the patient chose not to receive depression quality
@@ -175,6 +179,8 @@ depression_indicator_variables = dict(
             "first_day_of_month(index_date) - 11 months",
             "last_day_of_month(index_date)",
         ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.01},
     ),
     # Date of the earliest invitation for a depression review on or after the
@@ -242,12 +248,16 @@ depression_indicator_variables = dict(
             "first_day_of_month(index_date) - 2 months",
             "last_day_of_month(index_date)",
         ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.01},
     ),
     # Date variable: registered in the last 3 months
     registered_3mo=patients.registered_with_one_practice_between(
         start_date="first_day_of_month(index_date) - 2 months",
         end_date="last_day_of_month(index_date)",
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.1},
     ),
 )
