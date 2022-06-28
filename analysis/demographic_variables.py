@@ -62,14 +62,17 @@ demographic_variables = dict(
         }
     ),
     # Index of multiple deprivation
+    # NOTE: IMD range is from 1 to 32844
+    # Because round_to_nearest=100, categorised range is 0 to 32800
+    # See https://docs.opensafely.org/study-def-tricks/#grouping-imd-by-quintile
     imd=patients.categorised_as(
         {
             "Unknown": "DEFAULT",
-            "1 - most deprived": """index_of_multiple_deprivation >=1 AND index_of_multiple_deprivation < 32844*1/5""",
-            "2": """index_of_multiple_deprivation >= 32844*1/5 AND index_of_multiple_deprivation < 32844*2/5""",
-            "3": """index_of_multiple_deprivation >= 32844*2/5 AND index_of_multiple_deprivation < 32844*3/5""",
-            "4": """index_of_multiple_deprivation >= 32844*3/5 AND index_of_multiple_deprivation < 32844*4/5""",
-            "5 - least deprived": """index_of_multiple_deprivation >= 32844*4/5 """,
+            "1 - most deprived": """index_of_multiple_deprivation >=0 AND index_of_multiple_deprivation < 32800*1/5""",
+            "2": """index_of_multiple_deprivation >= 32800*1/5 AND index_of_multiple_deprivation < 32800*2/5""",
+            "3": """index_of_multiple_deprivation >= 32800*2/5 AND index_of_multiple_deprivation < 32800*3/5""",
+            "4": """index_of_multiple_deprivation >= 32800*3/5 AND index_of_multiple_deprivation < 32800*4/5""",
+            "5 - least deprived": """index_of_multiple_deprivation >= 32800*4/5 """,
         },
         index_of_multiple_deprivation=patients.address_as_of(
             "last_day_of_month(index_date)",
