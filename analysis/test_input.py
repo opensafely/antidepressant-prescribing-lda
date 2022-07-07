@@ -47,17 +47,21 @@ def check_register(df, depression_codes_2019):
 
 
 def plot_dates(df):
-    fig, axes = plt.subplots(nrows=1, ncols=2)
-    ever_diff = (
-        pandas.to_datetime(df["ever_review_date"])
-        - pandas.to_datetime(df["depression_15mo_date"])
-    ).astype("timedelta64[D]")
-    ever_diff.plot.hist(ax=axes[0], title="Ever Review")
-    review_diff = (
-        pandas.to_datetime(df["review_12mo_date"])
-        - pandas.to_datetime(df["depression_15mo_date"])
-    ).astype("timedelta64[D]")
-    review_diff.plot.hist(ax=axes[1], title="12 Month Review")
+    fig, axes = plt.subplots(nrows=2, ncols=2)
+    index = 0
+    for group in df.groupby("review_10_to_56d"):
+        state = group[1]
+        ever_diff = (
+            pandas.to_datetime(state["ever_review_date"])
+            - pandas.to_datetime(state["depression_15mo_date"])
+        ).astype("timedelta64[D]")
+        ever_diff.plot.hist(ax=axes[index, 0], title="Ever Review")
+        review_diff = (
+            pandas.to_datetime(state["review_12mo_date"])
+            - pandas.to_datetime(state["depression_15mo_date"])
+        ).astype("timedelta64[D]")
+        review_diff.plot.hist(ax=axes[index, 1], title="12 Month Review")
+        index = index + 1
 
 
 def check_indicator(df, depression_codes_2019):
@@ -100,6 +104,12 @@ def check_indicator(df, depression_codes_2019):
     # Check if you can have a diagnosis without a date
     # NOTE: assert=0
     r1_4 = df["depression_15mo"] & df["depression_15mo_date"].isnull()
+
+    # If someone had depression in the last 15 months, it should be the same
+    # date as the latest depression from the register
+    r1_5 = df["depression_15mo"] & (
+        df["depr_lat_date"] != df["depression_15mo_date"]
+    )
 
     # R2
     # Test that those who have never had a review are in r2
@@ -145,6 +155,29 @@ def check_indicator(df, depression_codes_2019):
     # NOTE assert=0
     numerator_1 = df["dep003_numerator"] & ~df["dep003_denominator"]
 
+    review_diff = (
+        pandas.to_datetime(df["review_12mo_date"])
+        - pandas.to_datetime(df["depression_15mo_date"])
+    ).astype("timedelta64[D]")
+
+    # Would be over inclusion
+    numerator_2 = df["review_10_to_56d"] & (review_diff < 9)
+
+    numerator_3 = df["review_10_to_56d"] & (review_diff > 57)
+
+    # Incorrect exclusion
+    numerator_4 = ~df["review_10_to_56d"] & (review_diff > 9) & (review_diff < 57)
+
+    # Range is off
+    numerator_5 = ~df["review_10_to_56d"] & (
+        (review_diff == 9) | (review_diff == 57)
+    )
+
+    # Review after depression in the last 15 months, but not numerator
+    numerator_6 = (
+        ~df["review_10_to_56d"] & df["depression_15mo"] & df["review_12mo"]
+    )
+
     numerator_v42 = df["dep003_numerator"] & df["depr_lat_code"].isin(
         depression_codes_2019.index
     )
@@ -158,6 +191,7 @@ def check_indicator(df, depression_codes_2019):
         "r1_2": r1_2.sum(),
         "r1_3": r1_3.sum(),
         "r1_4": r1_4.sum(),
+        "r1_5": r1_5.sum(),
         "r2_1": r2_1.sum(),
         "r4_1": r4_1.sum(),
         "r6_1": r6_1.sum(),
@@ -166,6 +200,11 @@ def check_indicator(df, depression_codes_2019):
         "r6_4": r6_4.sum(),
         "denominator_1": denominator_1.sum(),
         "numerator_1": numerator_1.sum(),
+        "numerator_2": numerator_2.sum(),
+        "numerator_3": numerator_3.sum(),
+        "numerator_4": numerator_4.sum(),
+        "numerator_5": numerator_5.sum(),
+        "numerator_6": numerator_6.sum(),
         "numerator_v42": numerator_v42.sum(),
         "denominator_v42": denominator_v42.sum(),
     }
