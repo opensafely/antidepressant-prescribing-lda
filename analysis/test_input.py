@@ -44,7 +44,7 @@ def check_register(df, depression_codes_2019):
     return pandas.DataFrame(list(output.items()))
 
 
-def check_indicator(df):
+def check_indicator(df, depression_codes_2019):
     # Population
     # Everyone on the register should be of depression list type
     # NOTE: assert=0
@@ -129,6 +129,14 @@ def check_indicator(df):
     # NOTE assert=0
     numerator_1 = df["dep003_numerator"] & ~df["dep003_denominator"]
 
+    numerator_v42 = df["dep003_numerator"] & df["depr_lat_code"].isin(
+        depression_codes_2019.index
+    )
+    denominator_v42 = df["dep003_denominator"] & df["depr_lat_code"].isin(
+        depression_codes_2019.index
+    )
+
+
     output = {
         "population_1": population_1.sum(),
         "r1_1": r1_1.sum(),
@@ -143,6 +151,8 @@ def check_indicator(df):
         "r6_4": r6_4.sum(),
         "denominator_1": denominator_1.sum(),
         "numerator_1": numerator_1.sum(),
+        "numerator_v42": numerator_v42.sum(),
+        "denominator_v42": denominator_v42.sum()
     }
     return pandas.DataFrame(list(output.items()))
 
@@ -220,7 +230,7 @@ def main():
         # TODO: come up with a better way to do this
         if "dep003" in fname:
             register_results = check_register(input_table, depression_codes_2019)
-            indicator_results = check_indicator(input_table)
+            indicator_results = check_indicator(input_table, depression_codes_2019)
             test_results = pandas.concat([register_results, indicator_results])
         elif "register" in fname:
             test_results = check_register(input_table, depression_codes_2019)
