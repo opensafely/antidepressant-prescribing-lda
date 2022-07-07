@@ -81,6 +81,10 @@ def check_indicator(df):
         )
     )
 
+    # Check if you can have a diagnosis without a date
+    # NOTE: assert=0
+    r1_4 = df["depression_15mo"] & df["depression_15mo_date"].isnull()
+
     # R2
     # Test that those who have never had a review are in r2
     # NOTE: assert>0
@@ -99,6 +103,13 @@ def check_indicator(df):
     # Test that anyone with a second invite is not in rule 6
     # NOTE assert=0
     r6_2 = df["dep003_denominator_r6"] & df["depr_invite_2"]
+
+    # Check if you can have a diagnosis without a date
+    # NOTE: assert=0
+    r6_3 = df["depr_invite_1"] & df["depr_invite_1_date"].isnull()
+    # Check if you can have a diagnosis without a date
+    # NOTE: assert=0
+    r6_4 = df["depr_invite_2"] & df["depr_invite_2_date"].isnull()
 
     # Denominator
     # To be in any exclusion criteria and denominator, must be in R3
@@ -123,10 +134,13 @@ def check_indicator(df):
         "r1_1": r1_1.sum(),
         "r1_2": r1_2.sum(),
         "r1_3": r1_3.sum(),
+        "r1_4": r1_4.sum(),
         "r2_1": r2_1.sum(),
         "r4_1": r4_1.sum(),
         "r6_1": r6_1.sum(),
         "r6_2": r6_2.sum(),
+        "r6_3": r6_3.sum(),
+        "r6_4": r6_4.sum(),
         "denominator_1": denominator_1.sum(),
         "numerator_1": numerator_1.sum(),
     }
