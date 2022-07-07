@@ -102,6 +102,24 @@ actions:
           # Only output the single summary file
           measure_csv: output/qof/joined/measure_register_*_rate.csv
 
+  join_measures_register:
+      run: python:latest python analysis/join_and_round.py
+           --input-list output/qof/joined/measure_register_total_rate.csv
+           --input-list output/qof/joined/measure_register_age_band_rate.csv
+           --input-list output/qof/joined/measure_register_carehome_rate.csv
+           --input-list output/qof/joined/measure_register_ethnicity_rate.csv
+           --input-list output/qof/joined/measure_register_imd_rate.csv
+           --input-list output/qof/joined/measure_register_learning_disability_rate.csv
+           --input-list output/qof/joined/measure_register_region_rate.csv
+           --input-list output/qof/joined/measure_register_sex_rate.csv
+           --output-dir output/qof/joined/summary
+           --output-name "measure_register.csv"
+      needs: [generate_measures_register]
+      outputs:
+        moderately_sensitive:
+          # Only output the single summary file
+          measure_csv: output/qof/joined/summary/measure_register.csv
+
   generate_measures_dep003:
       run: cohortextractor:latest generate_measures --study-definition study_definition_dep003 --output-dir=output/qof/joined
       needs: [join_cohorts_qof]
