@@ -87,7 +87,7 @@ actions:
     needs: [join_cohorts_qof]
     outputs:
       moderately_sensitive:
-        cohort: output/qof/joined/python/test_*.csv
+        cohort: output/qof/joined/python/test_*.*
 
   ####################
   # Measures

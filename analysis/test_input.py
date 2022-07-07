@@ -5,6 +5,8 @@ import glob
 import pathlib
 import pandas
 
+import matplotlib.pyplot as plt
+
 
 def check_register(df, depression_codes_2019):
     before_2006 = df["depression_register"] & (
@@ -42,6 +44,20 @@ def check_register(df, depression_codes_2019):
         "v42_codes": v42_codes.sum(),
     }
     return pandas.DataFrame(list(output.items()))
+
+
+def plot_dates(df):
+    fig, axes = plt.subplots(nrows=1, ncols=2)
+    ever_diff = (
+        pandas.to_datetime(df["ever_review_date"])
+        - pandas.to_datetime(df["depression_15mo_date"])
+    ).astype("timedelta64[D]")
+    ever_diff.plot.hist(ax=axes[0], title="Ever Review")
+    review_diff = (
+        pandas.to_datetime(df["review_12mo_date"])
+        - pandas.to_datetime(df["depression_15mo_date"])
+    ).astype("timedelta64[D]")
+    review_diff.plot.hist(ax=axes[1], title="12 Month Review")
 
 
 def check_indicator(df, depression_codes_2019):
@@ -136,7 +152,6 @@ def check_indicator(df, depression_codes_2019):
         depression_codes_2019.index
     )
 
-
     output = {
         "population_1": population_1.sum(),
         "r1_1": r1_1.sum(),
@@ -152,7 +167,7 @@ def check_indicator(df, depression_codes_2019):
         "denominator_1": denominator_1.sum(),
         "numerator_1": numerator_1.sum(),
         "numerator_v42": numerator_v42.sum(),
-        "denominator_v42": denominator_v42.sum()
+        "denominator_v42": denominator_v42.sum(),
     }
     return pandas.DataFrame(list(output.items()))
 
@@ -183,6 +198,9 @@ def get_input_table(input_files):
         input_table.attrs[
             "fname"
         ] = f"test_{input_file.name.rstrip(''.join(input_file.suffixes)).lstrip('input_')}.csv"
+        input_table.attrs[
+            "plot_name"
+        ] = f"test_{input_file.name.rstrip(''.join(input_file.suffixes)).lstrip('input_')}.png"
         yield input_table
 
 
@@ -229,9 +247,15 @@ def main():
         fname = input_table.attrs["fname"]
         # TODO: come up with a better way to do this
         if "dep003" in fname:
-            register_results = check_register(input_table, depression_codes_2019)
-            indicator_results = check_indicator(input_table, depression_codes_2019)
+            register_results = check_register(
+                input_table, depression_codes_2019
+            )
+            indicator_results = check_indicator(
+                input_table, depression_codes_2019
+            )
             test_results = pandas.concat([register_results, indicator_results])
+            plot_dates(input_table)
+            plt.savefig(output_dir / input_table.attrs["plot_name"])
         elif "register" in fname:
             test_results = check_register(input_table, depression_codes_2019)
         else:
