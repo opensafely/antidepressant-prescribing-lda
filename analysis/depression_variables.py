@@ -51,6 +51,18 @@ depression_register_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
     ),
+    depr_lat_count=patients.with_these_clinical_events(
+        between=[
+            depr_register_date,
+            "last_day_of_month(index_date)",
+        ],
+        codelist=depression_codes,
+        return_number_of_matches_in_period=True,
+        return_expectations={
+            "int": {"distribution": "normal", "mean": 3, "stddev": 1},
+            "incidence": 1,
+        },
+    ),
     depr_lat_code=patients.with_these_clinical_events(
         between=[
             depr_register_date,
@@ -121,6 +133,18 @@ depression_indicator_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
     ),
+    depression_15mo_count=patients.with_these_clinical_events(
+        codelist=depression_codes,
+        between=[
+            "first_day_of_month(index_date) - 14 months",
+            "last_day_of_month(index_date)",
+        ],
+        return_number_of_matches_in_period=True,
+        return_expectations={
+            "int": {"distribution": "normal", "mean": 3, "stddev": 1},
+            "incidence": 1,
+        },
+    ),
     # Date of the first depression review recorded within the period from 10 to
     # 56 days after the patients latest episode of depression up to and
     # including the achievement date.
@@ -155,6 +179,18 @@ depression_indicator_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
         return_expectations={"incidence": 0.01},
+    ),
+    review_12mo_count=patients.with_these_clinical_events(
+        codelist=depression_review_codes,
+        between=[
+            "first_day_of_month(index_date) - 11 months",
+            "last_day_of_month(index_date)",
+        ],
+        return_number_of_matches_in_period=True,
+        return_expectations={
+            "int": {"distribution": "normal", "mean": 3, "stddev": 1},
+            "incidence": 1,
+        },
     ),
     # The most recent date that depression quality indicator care was
     # identified as being unsuitable for the patient up to and including the

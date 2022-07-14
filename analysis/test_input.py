@@ -70,6 +70,29 @@ def check_indicator(df, depression_codes_2019):
     # NOTE: assert=0
     population_1 = df["depression_register"] & ~df["depression_list_type"]
 
+    multiple_depression = df["depr_lat_count"]
+    multiple_15mo_depression = df["depression_15mo_count"]
+    multiple_reviews = df["review_12mo_count"]
+
+    missing_with_multiple = ~df["dep003_numerator"] & (df["depression_15mo_count"] > 1)
+    missing_with_multiple_and_review = ~df["dep003_numerator"] & (df["depression_15mo_count"] > 1) & df["review_12mo"]
+
+    review_same_day_numerator = (
+        df["depression_register"]
+        & df["dep003_numerator"]
+        & df["depr_lat"]
+        & df["ever_review"]
+        & (df["depr_lat_date"] == df["ever_review_date"])
+    )
+
+    review_same_day_not_numerator = (
+        df["depression_register"]
+        & ~df["dep003_numerator"]
+        & df["depr_lat"]
+        & df["ever_review"]
+        & (df["depr_lat_date"] == df["ever_review_date"])
+    )
+
     # R1
     # Test that that r1 only includes those on the register
     # NOTE: assert=0
@@ -187,6 +210,13 @@ def check_indicator(df, depression_codes_2019):
 
     output = {
         "population_1": population_1.sum(),
+        "multiple_depression": multiple_depression.mean(),
+        "multiple_15mo_depression": multiple_15mo_depression.mean(),
+        "multiple_reviews": multiple_reviews.mean(),
+        "missing_with_multiple": missing_with_multiple.sum(),
+        "missing_with_multiple_and_review": missing_with_multiple_and_review.sum(),
+        "review_same_day_numerator": review_same_day_numerator.sum(),
+        "review_same_day_not_numerator": review_same_day_not_numerator.sum(),
         "r1_1": r1_1.sum(),
         "r1_2": r1_2.sum(),
         "r1_3": r1_3.sum(),
