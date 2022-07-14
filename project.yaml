@@ -18,21 +18,21 @@ actions:
 
   # Generate depression register by month
   generate_study_population_register:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_register --index-date-range "2019-03-01 to 2022-04-01 by month" --output-format=csv.gz --output-dir output/qof
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_register --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof
     outputs:
       highly_sensitive:
         cohort: output/qof/input_register_*.csv.gz
 
   # Generate dep003 by month
   generate_study_population_dep003:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2019-03-01 to 2022-04-01 by month" --output-format=csv.gz --output-dir output/qof
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof
     outputs:
       highly_sensitive:
         cohort: output/qof/input_dep003_*.csv.gz
 
   # Generate prescription variables by month
   generate_study_population_lda:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2019-03-01 to 2022-04-01 by month" --output-format=csv.gz --output-dir output/lda
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2020-01-01 to 2022-04-01 by month" --output-format=csv.gz --output-dir output/lda
     outputs:
       highly_sensitive:
         cohort: output/lda/input_lda_*.csv.gz
