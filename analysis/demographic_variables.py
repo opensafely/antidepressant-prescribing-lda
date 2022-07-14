@@ -64,6 +64,7 @@ demographic_variables = dict(
     # Index of multiple deprivation
     # NOTE: IMD range is from 1 to 32844
     # Because round_to_nearest=100, categorised range is 0 to 32800
+    # Missing addresses will be coded as -1, included in Unknown
     # See https://docs.opensafely.org/study-def-tricks/#grouping-imd-by-quintile
     imd=patients.categorised_as(
         {
