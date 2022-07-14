@@ -49,7 +49,7 @@ def check_register(df, depression_codes_2019):
 def plot_dates(df):
     fig, axes = plt.subplots(nrows=2, ncols=2)
     index = 0
-    for group in df.groupby("review_10_to_56d"):
+    for group in df.groupby("dep003_numerator"):
         state = group[1]
         ever_diff = (
             pandas.to_datetime(state["ever_review_date"])
@@ -161,21 +161,21 @@ def check_indicator(df, depression_codes_2019):
     ).astype("timedelta64[D]")
 
     # Would be over inclusion
-    numerator_2 = df["review_10_to_56d"] & (review_diff < 9)
+    numerator_2 = df["dep003_numerator"] & (review_diff < 9)
 
-    numerator_3 = df["review_10_to_56d"] & (review_diff > 57)
+    numerator_3 = df["dep003_numerator"] & (review_diff > 57)
 
     # Incorrect exclusion
-    numerator_4 = ~df["review_10_to_56d"] & (review_diff > 9) & (review_diff < 57)
+    numerator_4 = ~df["dep003_numerator"] & (review_diff > 9) & (review_diff < 57)
 
     # Range is off
-    numerator_5 = ~df["review_10_to_56d"] & (
+    numerator_5 = ~df["dep003_numerator"] & (
         (review_diff == 9) | (review_diff == 57)
     )
 
     # Review after depression in the last 15 months, but not numerator
     numerator_6 = (
-        ~df["review_10_to_56d"] & df["depression_15mo"] & df["review_12mo"]
+        ~df["dep003_numerator"] & df["depression_15mo"] & df["review_12mo"]
     )
 
     numerator_v42 = df["dep003_numerator"] & df["depr_lat_code"].isin(
