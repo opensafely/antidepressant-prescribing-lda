@@ -245,6 +245,8 @@ def check_indicator(df, depression_codes_2019):
         numerator_python | numerator_python_1 | numerator_python_2
     )
 
+    numerator_review = df["diagnosis_10_to_56d"]
+
     numerator_v42 = df["dep003_numerator"] & df["depr_lat_code"].isin(
         depression_codes_2019.index
     )
@@ -283,6 +285,7 @@ def check_indicator(df, depression_codes_2019):
         "numerator_python_1": numerator_python_1.sum(),
         "numerator_python_2": numerator_python_2.sum(),
         "numerator_python_any": numerator_python_any.sum(),
+        "numerator_review": numerator_review.sum(),
         "numerator_v42": numerator_v42.sum(),
         "denominator_v42": denominator_v42.sum(),
     }
@@ -371,8 +374,8 @@ def main():
                 input_table, depression_codes_2019
             )
             test_results = pandas.concat([register_results, indicator_results])
-            plot_dates(input_table)
-            plt.savefig(output_dir / input_table.attrs["plot_name"])
+            #plot_dates(input_table)
+            #plt.savefig(output_dir / input_table.attrs["plot_name"])
         elif "register" in fname:
             test_results = check_register(input_table, depression_codes_2019)
         else:

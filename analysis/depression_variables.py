@@ -212,6 +212,19 @@ depression_indicator_variables = dict(
             "incidence": 1,
         },
     ),
+    # There are potentially many diagnosis codes
+    # Check for diagnosis 10-56 days before the review
+    diagnosis_10_to_56d=patients.with_these_clinical_events(
+        codelist=depression_codes,
+        returning="binary_flag",
+        find_first_match_in_period=True,
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+        between=[
+            "review_12mo_date -57 days",
+            "review_12mo_date -9 days",
+        ],
+    ),
     # The most recent date that depression quality indicator care was
     # identified as being unsuitable for the patient up to and including the
     # achievement date.
