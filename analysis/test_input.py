@@ -74,8 +74,14 @@ def check_indicator(df, depression_codes_2019):
     multiple_15mo_depression = df["depression_15mo_count"]
     multiple_reviews = df["review_12mo_count"]
 
-    missing_with_multiple = ~df["dep003_numerator"] & (df["depression_15mo_count"] > 1)
-    missing_with_multiple_and_review = ~df["dep003_numerator"] & (df["depression_15mo_count"] > 1) & df["review_12mo"]
+    missing_with_multiple = ~df["dep003_numerator"] & (
+        df["depression_15mo_count"] > 1
+    )
+    missing_with_multiple_and_review = (
+        ~df["dep003_numerator"]
+        & (df["depression_15mo_count"] > 1)
+        & df["review_12mo"]
+    )
 
     review_same_day_numerator = (
         df["depression_register"]
@@ -183,13 +189,25 @@ def check_indicator(df, depression_codes_2019):
         - pandas.to_datetime(df["depression_15mo_date"])
     ).astype("timedelta64[D]")
 
+    review_diff_1 = (
+        pandas.to_datetime(df["review_12mo_date"])
+        - pandas.to_datetime(df["depression_15mo_1_date"])
+    ).astype("timedelta64[D]")
+
+    review_diff_2 = (
+        pandas.to_datetime(df["review_12mo_date"])
+        - pandas.to_datetime(df["depression_15mo_2_date"])
+    ).astype("timedelta64[D]")
+
     # Would be over inclusion
     numerator_2 = df["dep003_numerator"] & (review_diff < 9)
 
     numerator_3 = df["dep003_numerator"] & (review_diff > 57)
 
     # Incorrect exclusion
-    numerator_4 = ~df["dep003_numerator"] & (review_diff > 9) & (review_diff < 57)
+    numerator_4 = (
+        ~df["dep003_numerator"] & (review_diff > 9) & (review_diff < 57)
+    )
 
     # Range is off
     numerator_5 = ~df["dep003_numerator"] & (
@@ -199,6 +217,32 @@ def check_indicator(df, depression_codes_2019):
     # Review after depression in the last 15 months, but not numerator
     numerator_6 = (
         ~df["dep003_numerator"] & df["depression_15mo"] & df["review_12mo"]
+    )
+
+    numerator_python = (
+        df["dep003_denominator_r2"]
+        & df["depression_15mo"]
+        & df["review_12mo"]
+        & (review_diff > 9)
+        & (review_diff < 57)
+    )
+    numerator_python_1 = (
+        df["dep003_denominator_r2"]
+        & df["depression_15mo_1"]
+        & df["review_12mo"]
+        & (review_diff_1 > 9)
+        & (review_diff_1 < 57)
+    )
+    numerator_python_2 = (
+        df["dep003_denominator_r2"]
+        & df["depression_15mo_2"]
+        & df["review_12mo"]
+        & (review_diff_2 > 9)
+        & (review_diff_2 < 57)
+    )
+
+    numerator_python_any = (
+        numerator_python | numerator_python_1 | numerator_python_2
     )
 
     numerator_v42 = df["dep003_numerator"] & df["depr_lat_code"].isin(
@@ -235,6 +279,10 @@ def check_indicator(df, depression_codes_2019):
         "numerator_4": numerator_4.sum(),
         "numerator_5": numerator_5.sum(),
         "numerator_6": numerator_6.sum(),
+        "numerator_python": numerator_python.sum(),
+        "numerator_python_1": numerator_python_1.sum(),
+        "numerator_python_2": numerator_python_2.sum(),
+        "numerator_python_any": numerator_python_any.sum(),
         "numerator_v42": numerator_v42.sum(),
         "denominator_v42": denominator_v42.sum(),
     }

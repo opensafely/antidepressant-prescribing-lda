@@ -72,10 +72,8 @@ depression_register_variables = dict(
         returning="code",
         find_last_match_in_period=True,
         return_expectations={
-            "category":{
-                "ratios": {"10": 0.2, "11": 0.3, "12": 0.5}
-            }
-        }
+            "category": {"ratios": {"10": 0.2, "11": 0.3, "12": 0.5}}
+        },
     ),
     # Date of the first episode of depression up to and including the
     # achievement date.
@@ -129,6 +127,28 @@ depression_indicator_variables = dict(
         between=[
             "first_day_of_month(index_date) - 14 months",
             "last_day_of_month(index_date)",
+        ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+    ),
+    depression_15mo_1=patients.with_these_clinical_events(
+        codelist=depression_codes,
+        returning="binary_flag",
+        find_last_match_in_period=True,
+        between=[
+            "first_day_of_month(index_date) - 14 months",
+            "depression_15mo_date - 1 day",
+        ],
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+    ),
+    depression_15mo_2=patients.with_these_clinical_events(
+        codelist=depression_codes,
+        returning="binary_flag",
+        find_last_match_in_period=True,
+        between=[
+            "first_day_of_month(index_date) - 14 months",
+            "depression_15mo_1_date - 1 day",
         ],
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
@@ -242,10 +262,8 @@ depression_indicator_variables = dict(
             "last_day_of_month(index_date)",
         ],
         return_expectations={
-            "category":{
-                "ratios": {"10": 0.2, "11": 0.3, "12": 0.5}
-            }
-        }
+            "category": {"ratios": {"10": 0.2, "11": 0.3, "12": 0.5}}
+        },
     ),
     # Date of the earliest invitation for a depression review recorded at least
     # 7 days after the first invitation and up to and including the achievement
@@ -271,10 +289,8 @@ depression_indicator_variables = dict(
             "last_day_of_month(index_date)",
         ],
         return_expectations={
-            "category":{
-                "ratios": {"10": 0.2, "11": 0.3, "12": 0.5}
-            }
-        }
+            "category": {"ratios": {"10": 0.2, "11": 0.3, "12": 0.5}}
+        },
     ),
     # Date variable: depression diagnosis in the last 3 months
     depression_3mo=patients.with_these_clinical_events(
