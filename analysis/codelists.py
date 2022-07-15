@@ -107,6 +107,13 @@ depression_invitation_codes = codelist_from_csv(
     column="code",
 )
 
+# Qualifier codes
+qualifier_codes = codelist_from_csv(
+    "codelists/ongoing.csv",
+    system="snomed",
+    column="code",
+)
+
 # Variables
 
 # Ethnicity
