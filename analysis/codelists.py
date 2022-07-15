@@ -109,7 +109,7 @@ depression_invitation_codes = codelist_from_csv(
 
 # Qualifier codes
 qualifier_codes = codelist_from_csv(
-    "codelists/ongoing.csv",
+    "codelists/user-ccunningham-ongoing_qualifiers.csv",
     system="snomed",
     column="code",
 )

@@ -24,6 +24,12 @@
       "downloaded_at": "2022-01-28 12:03:04.974496Z",
       "sha": "fe8bce134ed68b81aee0a15f8f258bfb31fc0c1c"
     },
+    "user-ccunningham-ongoing_qualifiers.csv": {
+      "id": "user/ccunningham/ongoing_qualifiers/7c4538f6",
+      "url": "https://codelists.opensafely.org/codelist/user/ccunningham/ongoing_qualifiers/7c4538f6/",
+      "downloaded_at": "2022-07-15 16:45:29.991883Z",
+      "sha": "06d16cc8935c695c7697074ec800ff5dc92ea488"
+    },
     "user-ccunningham-depr_cod_qof_v042.csv": {
       "id": "user/ccunningham/depr_cod_qof_v042/4af66f18",
       "url": "https://codelists.opensafely.org/codelist/user/ccunningham/depr_cod_qof_v042/4af66f18/",
