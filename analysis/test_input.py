@@ -64,6 +64,12 @@ def plot_dates(df):
         index = index + 1
 
 
+def plot_diagnoses(df):
+    figure = plt.figure()
+    multiple_15mo_depression = df[df["depression_15mo_count"] > 0]["depression_15mo_count"]
+    multiple_15mo_depression.plot.hist(title="Count of 15mo Depression Diagnosis")
+
+
 def check_indicator(df, depression_codes_2019):
     # Population
     # Everyone on the register should be of depression list type
@@ -71,7 +77,7 @@ def check_indicator(df, depression_codes_2019):
     population_1 = df["depression_register"] & ~df["depression_list_type"]
 
     multiple_depression = df["depr_lat_count"]
-    multiple_15mo_depression = df["depression_15mo_count"]
+    multiple_15mo_depression = df[df["depression_15mo_count"] > 0]["depression_15mo_count"]
     multiple_reviews = df["review_12mo_count"]
 
     missing_with_multiple = ~df["dep003_numerator"] & (
@@ -374,8 +380,8 @@ def main():
                 input_table, depression_codes_2019
             )
             test_results = pandas.concat([register_results, indicator_results])
-            #plot_dates(input_table)
-            #plt.savefig(output_dir / input_table.attrs["plot_name"])
+            plot_diagnoses(input_table)
+            plt.savefig(output_dir / input_table.attrs["plot_name"])
         elif "register" in fname:
             test_results = check_register(input_table, depression_codes_2019)
         else:
