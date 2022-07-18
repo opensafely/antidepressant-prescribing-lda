@@ -89,6 +89,18 @@ depression_register_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
     ),
+    depr_code=patients.with_these_clinical_events(
+        between=[
+            depr_register_date,
+            "last_day_of_month(index_date)",
+        ],
+        codelist=depression_codes,
+        returning="code",
+        find_first_match_in_period=True,
+        return_expectations={
+            "category": {"ratios": {"10": 0.2, "11": 0.3, "12": 0.5}}
+        },
+    ),
     # Date of the most recent depression resolved code
     depr_res=patients.with_these_clinical_events(
         codelist=depression_resolved_codes,
@@ -97,6 +109,40 @@ depression_register_variables = dict(
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
         returning="binary_flag",
+    ),
+    # Ongoing episode of depression prior to depr_register_date
+    # TODO: with on_or_before double counting register date
+    previous_depr=patients.with_these_clinical_events(
+        on_or_before=depr_register_date,
+        codelist=depression_codes,
+        returning="binary_flag",
+        find_last_match_in_period=True,
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+    ),
+    previous_depr_code=patients.with_these_clinical_events(
+        on_or_before=depr_register_date,
+        codelist=depression_codes,
+        returning="code",
+        find_last_match_in_period=True,
+        return_expectations={
+            "category": {"ratios": {"10": 0.2, "11": 0.3, "12": 0.5}}
+        },
+    ),
+    previous_depr_res=patients.with_these_clinical_events(
+        between=["previous_depr_date", "depr_date"],
+        codelist=depression_resolved_codes,
+        find_last_match_in_period=True,
+        include_date_of_match=True,
+        date_format="YYYY-MM-DD",
+        returning="binary_flag",
+    ),
+    ongoing_episode=patients.satisfying(
+        """
+        previous_depr AND
+        (NOT previous_depr_res) AND
+        previous_depr_code = depr_code
+        """
     ),
     depression_register=patients.satisfying(
         """
@@ -109,7 +155,8 @@ depression_register_variables = dict(
                 (depr AND depr_res) AND
                 (depr_res_date < depr_lat_date)
             )
-        )
+        ) AND
+        (NOT ongoing_episode)
         """,
     ),
 )
