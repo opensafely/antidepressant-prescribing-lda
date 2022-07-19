@@ -18,7 +18,6 @@ from codelists import (
     depression_review_unsuitable_codes,
     depression_review_dissent_codes,
     depression_invitation_codes,
-    qualifier_codes,
 )
 
 from config import depr_register_date
@@ -171,7 +170,6 @@ depression_indicator_variables = dict(
     depression_15mo=patients.with_these_clinical_events(
         codelist=depression_codes,
         returning="binary_flag",
-        ignore_days_where_these_codes_occur=qualifier_codes,
         find_last_match_in_period=True,
         between=[
             "first_day_of_month(index_date) - 14 months",
