@@ -107,14 +107,15 @@ for d in demographics:
 
 ### Debugging
 for i in range(1, 9):
-    m = Measure(
-        id=f"dep003_denominator_r{i}_total_rate",
-        numerator=f"dep003_denominator_r{i}",
-        denominator="population",
-        group_by="population",
-        small_number_suppression=True,
-    )
-    measures.append(m)
+    if i != 3:
+        m = Measure(
+            id=f"dep003_denominator_r{i}_total_rate",
+            numerator=f"dep003_denominator_r{i}",
+            denominator="population",
+            group_by="population",
+            small_number_suppression=True,
+        )
+        measures.append(m)
 
 ### Exclusions
 exclusions = ["unsuitable_12mo", "dissent_12mo"]
