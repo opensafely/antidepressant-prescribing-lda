@@ -141,13 +141,9 @@ def check_indicator(df, depression_codes_2019):
         )
     )
 
-    # Check if you can have a diagnosis without a date
-    # NOTE: assert=0
-    r1_4 = df["depression_15mo"] & df["depression_15mo_date"].isnull()
-
     # If someone had depression in the last 15 months, it should be the same
     # date as the latest depression from the register
-    r1_5 = df["depression_15mo"] & (
+    r1_5 = df["depression_15mo_date"].notnull() & (
         df["depr_lat_date"] != df["depression_15mo_date"]
     )
 
@@ -217,12 +213,14 @@ def check_indicator(df, depression_codes_2019):
 
     # Review after depression in the last 15 months, but not numerator
     numerator_6 = (
-        ~df["dep003_numerator"] & df["depression_15mo"] & df["review_12mo"]
+        ~df["dep003_numerator"]
+        & df["depression_15mo_date"].notnull()
+        & df["review_12mo"]
     )
 
     numerator_python = (
         df["dep003_denominator_r2"]
-        & df["depression_15mo"]
+        & df["depression_15mo_date"].notnull()
         & df["review_12mo"]
         & (review_diff > 9)
         & (review_diff < 57)
@@ -233,22 +231,6 @@ def check_indicator(df, depression_codes_2019):
     )
     denominator_v42 = df["dep003_denominator"] & df["depr_lat_code"].isin(
         depression_codes_2019.index
-    )
-
-    # Check if the diagnosis was changed
-    later_depression = (
-        df["depression_15mo_code"].notnull()
-        & df["depression_15mo_1_code"].notnull()
-        & (
-            (df["depression_15mo_code"] != df["depression_15mo_1_code"])
-            | (
-                df["depression_15mo_2_code"].notnull()
-                & (
-                    df["depression_15mo_1_code"]
-                    != df["depression_15mo_2_code"]
-                )
-            )
-        )
     )
 
     # Check if we are missing any new after resolved
@@ -266,7 +248,9 @@ def check_indicator(df, depression_codes_2019):
     output = {
         "population_1": population_1.sum(),
         "multiple_depression": multiple_depression.mean(),
+        "max_depression": multiple_depression.max(),
         "multiple_15mo_depression": multiple_15mo_depression.mean(),
+        "max_15mo_depression": multiple_15mo_depression.max(),
         "missing_with_multiple": missing_with_multiple.sum(),
         "missing_with_multiple_and_review": missing_with_multiple_and_review.sum(),
         "review_same_day_numerator": review_same_day_numerator.sum(),
@@ -274,7 +258,6 @@ def check_indicator(df, depression_codes_2019):
         "r1_1": r1_1.sum(),
         "r1_2": r1_2.sum(),
         "r1_3": r1_3.sum(),
-        "r1_4": r1_4.sum(),
         "r1_5": r1_5.sum(),
         "r2_1": r2_1.sum(),
         "r4_1": r4_1.sum(),
@@ -292,7 +275,6 @@ def check_indicator(df, depression_codes_2019):
         "numerator_python": numerator_python.sum(),
         "numerator_v42": numerator_v42.sum(),
         "denominator_v42": denominator_v42.sum(),
-        "later_depression": later_depression.sum(),
         "resolved_after_first": resolved_after_first.sum(),
     }
     return pandas.DataFrame(list(output.items()))

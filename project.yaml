@@ -6,22 +6,24 @@ expectations:
 actions:
 
   ####################
-  # Qualifier Testing
+  # Depression events
   ####################
 
-  generate_study_population_qualifiers:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_qualifiers --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof/qualifiers
+  generate_study_population_depression_events:
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_depression_events --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof/events
     outputs:
       highly_sensitive:
-        cohort: output/qof/qualifiers/input_qualifiers_*.csv.gz
+        cohort: output/qof/events/input_depression_events_*.csv.gz
 
-  generate_measures_qualifiers:
-      run: cohortextractor:latest generate_measures --study-definition study_definition_qualifiers --output-dir=output/qof/qualifiers
-      needs: [generate_study_population_qualifiers]
-      outputs:
-        moderately_sensitive:
-          # Only output the single summary file
-          measure_csv: output/qof/qualifiers/measure_*_rate.csv
+  find_first_or_latest:
+    run: >
+      python:latest python analysis/depression_date.py
+        --input-files output/qof/events/input_depression_events_*.csv.gz
+        --output-dir output/qof/events
+    needs: [generate_study_population_depression_events]
+    outputs:
+      highly_sensitive:
+        cohort: output/qof/events/depression_events_*.csv
 
   ####################
   # Cohort Generation
@@ -44,6 +46,7 @@ actions:
   # Generate dep003 by month
   generate_study_population_dep003:
     run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof
+    needs: [find_first_or_latest]
     outputs:
       highly_sensitive:
         cohort: output/qof/input_dep003_*.csv.gz
@@ -51,6 +54,7 @@ actions:
   # Generate prescription variables by month
   generate_study_population_lda:
     run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/lda
+    needs: [find_first_or_latest]
     outputs:
       highly_sensitive:
         cohort: output/lda/input_lda_*.csv.gz
@@ -140,7 +144,7 @@ actions:
 
   generate_measures_dep003:
       run: cohortextractor:latest generate_measures --study-definition study_definition_dep003 --output-dir=output/qof/joined
-      needs: [join_cohorts_qof]
+      needs: [find_first_or_latest, join_cohorts_qof]
       outputs:
         moderately_sensitive:
           # Only output the single summary file
@@ -148,7 +152,7 @@ actions:
 
   generate_measures_lda:
       run: cohortextractor:latest generate_measures --study-definition study_definition_lda --output-dir=output/lda/joined
-      needs: [join_cohorts_lda]
+      needs: [find_first_or_latest, join_cohorts_lda]
       outputs:
         moderately_sensitive:
           # Only output the single summary file
