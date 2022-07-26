@@ -32,6 +32,9 @@ def get_latest_date(input_table):
         latest_date.update(to_update)
     return latest_date
 
+def filter_nones(input_table):
+    return input_table.dropna(inplace=True)
+
 def get_input_table(input_files):
     for input_file in input_files:
         input_table = read_dataframe(input_file)
@@ -100,6 +103,7 @@ def main():
 
     for input_table in get_input_table(input_list or input_files):
         output = get_latest_date(input_table)
+        filter_nones(output)
         fname = input_table.attrs["fname"]
         write_table(output, output_dir, fname)
 
