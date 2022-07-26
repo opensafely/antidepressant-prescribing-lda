@@ -95,15 +95,15 @@ measures = [
 ]
 
 # QOF achievement by each demographic in the config file
-for d in demographics:
-    m = Measure(
-        id=f"dep003_{d}_rate",
-        numerator="dep003_numerator",
-        denominator="dep003_denominator",
-        group_by=[d],
-        small_number_suppression=True,
-    )
-    measures.append(m)
+# for d in demographics:
+#    m = Measure(
+#        id=f"dep003_{d}_rate",
+#        numerator="dep003_numerator",
+#        denominator="dep003_denominator",
+#        group_by=[d],
+#        small_number_suppression=True,
+#    )
+#    measures.append(m)
 
 ### Debugging
 for i in range(1, 9):
@@ -136,12 +136,12 @@ for ex in exclusions:
         group_by=["practice"],
     )
     measures.append(m)
-    for d in demographics:
-        m = Measure(
-            id=f"dep003_excl_{ex}_{d}_rate",
-            numerator=ex,
-            denominator="population",
-            group_by=[d],
-            small_number_suppression=True,
-        )
-        measures.append(m)
+    #for d in demographics:
+    #    m = Measure(
+    #        id=f"dep003_excl_{ex}_{d}_rate",
+    #        numerator=ex,
+    #        denominator="population",
+    #        group_by=[d],
+    #        small_number_suppression=True,
+    #    )
+    #    measures.append(m)

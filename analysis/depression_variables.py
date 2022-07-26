@@ -168,12 +168,23 @@ depression_indicator_variables = dict(
     # Instead select those with depression in the last 15 months
     # NOTE: if a diagnosis is updated during the 15 months, we will have the
     # wrong date
-    depression_15mo_date=patients.with_value_from_file(
-        f_path=f"output/qof/events/depression_events_{start_date}.csv",
-        returning="depression_15mo_date",
-        returning_type="date",
+    depression_15mo=patients.with_these_clinical_events(
+        codelist=depression_codes,
+        returning="binary_flag",
+        find_first_match_in_period=True,
+        between=[
+            "first_day_of_month(index_date) - 14 months",
+            "last_day_of_month(index_date)",
+        ],
+        include_date_of_match=True,
         date_format="YYYY-MM-DD",
     ),
+    # depression_15mo_date=patients.with_value_from_file(
+    #    f_path=f"output/qof/events/depression_events_{start_date}.csv",
+    #    returning="depression_15mo_date",
+    #    returning_type="date",
+    #    date_format="YYYY-MM-DD",
+    # ),
     depression_15mo_code=patients.with_these_clinical_events(
         codelist=depression_codes,
         returning="code",
