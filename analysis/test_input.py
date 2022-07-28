@@ -85,6 +85,8 @@ def check_indicator(df, depression_codes_2019):
         "depression_15mo_count"
     ]
 
+    gt_10_15mo_depression = df[df["depression_15mo_count"] > 10]
+
     missing_with_multiple = ~df["dep003_numerator"] & (
         df["depression_15mo_count"] > 1
     )
@@ -251,6 +253,7 @@ def check_indicator(df, depression_codes_2019):
         "max_depression": multiple_depression.max(),
         "multiple_15mo_depression": multiple_15mo_depression.mean(),
         "max_15mo_depression": multiple_15mo_depression.max(),
+        "gt_10_15mo_depression": len(gt_10_15mo_depression),
         "missing_with_multiple": missing_with_multiple.sum(),
         "missing_with_multiple_and_review": missing_with_multiple_and_review.sum(),
         "review_same_day_numerator": review_same_day_numerator.sum(),
