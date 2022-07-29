@@ -45,19 +45,11 @@ actions:
 
   # Generate dep003 by month
   generate_study_population_dep003:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof --with-end-date-fix
     needs: []
     outputs:
       highly_sensitive:
         cohort: output/qof/input_dep003_*.csv.gz
-
-  # Generate dep003 by month
-  generate_study_population_dep003_date_fix:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof/date_fix/ --with-end-date-fix
-    needs: []
-    outputs:
-      highly_sensitive:
-        cohort: output/qof/date_fix/input_dep003_*.csv.gz
 
   # Generate prescription variables by month
   generate_study_population_lda:
@@ -157,14 +149,6 @@ actions:
         moderately_sensitive:
           # Only output the single summary file
           measure_csv: output/qof/measure_dep003_*_rate.csv
-
-  generate_measures_dep003_date_fix:
-      run: cohortextractor:latest generate_measures --study-definition study_definition_dep003 --output-dir=output/qof/date_fix/
-      needs: [generate_study_population_dep003_date_fix]
-      outputs:
-        moderately_sensitive:
-          # Only output the single summary file
-          measure_csv: output/qof/date_fix/measure_dep003_*_rate.csv
 
   generate_measures_lda:
       run: cohortextractor:latest generate_measures --study-definition study_definition_lda --output-dir=output/lda/joined

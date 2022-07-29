@@ -9,7 +9,7 @@
 ####################################################################
 
 
-from cohortextractor import patients
+from cohortextractor import patients, codelist
 
 from codelists import (
     depression_codes,
@@ -21,6 +21,32 @@ from codelists import (
 )
 
 from config import start_date, depr_register_date
+
+
+def loop_over_codes(code_list, start_date):
+    def make_variable(name, code, start_date):
+        return {
+            name: (
+                patients.with_these_clinical_events(
+                    codelist([code], system="snomed"),
+                    returning="date",
+                    between=[
+                        start_date,
+                        "last_day_of_month(index_date)",
+                    ],
+                    date_format="YYYY-MM-DD",
+                    find_first_match_in_period=True,
+                )
+            ),
+        }
+
+    variables = {}
+    for code in code_list:
+        variables.update(
+            make_variable(f"depression_{code}_date", code, start_date)
+        )
+    return variables
+
 
 depression_register_variables = dict(
     # Depression register:  Patients aged at least 18 years old whose latest
@@ -168,16 +194,10 @@ depression_indicator_variables = dict(
     # Instead select those with depression in the last 15 months
     # NOTE: if a diagnosis is updated during the 15 months, we will have the
     # wrong date
-    depression_15mo=patients.with_these_clinical_events(
-        codelist=depression_codes,
-        returning="binary_flag",
-        find_first_match_in_period=True,
-        between=[
-            "first_day_of_month(index_date) - 14 months",
-            "last_day_of_month(index_date)",
-        ],
-        include_date_of_match=True,
-        date_format="YYYY-MM-DD",
+    depression_15mo_date=patients.maximum_of(
+        **loop_over_codes(
+            depression_codes, "first_day_of_month(index_date) - 14 months"
+        )
     ),
     # depression_15mo_date=patients.with_value_from_file(
     #    f_path=f"output/qof/events/depression_events_{start_date}.csv",
