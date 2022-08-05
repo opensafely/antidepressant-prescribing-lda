@@ -9,7 +9,7 @@ nhsd-primary-care-domain-refsets/deprvw_cod/20210127
 nhsd-primary-care-domain-refsets/deprinvite_cod/20200812
 nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812
 nhsd-primary-care-domain-refsets/deprpcadec_cod/20200812
-opensafely/ethnicity/746e4c98
+opensafely/ethnicity-snomed-0removed/2e641f61
 opensafely/selective-serotonin-reuptake-inhibitors-dmd/6a572e55
 opensafely/tricyclic-and-related-antidepressants-dmd/1268eae1/
 opensafely/monoamine-oxidase-inhibitors-dmd/2b785e16/

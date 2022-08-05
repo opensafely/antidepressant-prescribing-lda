@@ -117,11 +117,9 @@ qualifier_codes = codelist_from_csv(
 # Variables
 
 # Ethnicity
-# TODO: switch to snomed once codelist is ready
-# Not running on EMIS, and this codelist has less missingness than primis
 ethnicity_codes_6 = codelist_from_csv(
-    "codelists/opensafely-ethnicity.csv",
-    system="ctv3",
-    column="Code",
+    "codelists/opensafely-ethnicity-snomed-0removed.csv",
+    system="snomed",
+    column="snomedcode",
     category_column="Grouping_6",
 )
