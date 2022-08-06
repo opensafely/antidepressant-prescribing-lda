@@ -136,6 +136,17 @@ actions:
           # Only output the single summary file
           measure_csv: output/lda/joined/measure_*_rate.csv
 
+  join_measures_lda:
+      run: python:latest python analysis/join_and_round.py
+           --input-files output/lda/joined/measure_*.csv
+           --output-dir output/lda/joined/summary
+           --output-name "measure_lda.csv"
+      needs: [generate_measures_lda]
+      outputs:
+        moderately_sensitive:
+          # Only output the single summary file
+          measure_csv: output/lda/joined/summary/measure_lda.csv
+
   #############################
   # Plotting
   #############################
@@ -167,17 +178,92 @@ actions:
       moderately_sensitive:
         cohort: output/qof/joined/group_chart_*.png
 
-  generate_lda_groups:
+  generate_lda_all_prescribing:
     run: >
-            python:latest python analysis/group_charts.py
-            --input-files output/lda/joined/measure_*.csv
-            --output-dir output/lda/joined
+            python:latest python analysis/panel_plots.py
+            --input-file output/lda/joined/summary/measure_lda.csv
+            --measures-pattern "antidepressant_*_all_total_rate"
+            --output-dir output/lda/joined/summary
+            --output-name "total_population_prescribing"
             --date-lines "2020-03-16" "2020-12-02"
             --scale "rate"
-    needs: [generate_measures_lda]
+            --confidence-intervals
+    needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
-        cohort: output/lda/joined/group_chart_*.png
+        cohort: output/lda/joined/summary/total_population_prescribing.png
+
+  generate_lda_learning_disability_prescribing:
+    run: >
+            python:latest python analysis/panel_plots.py
+            --input-file output/lda/joined/summary/measure_lda.csv
+            --measures-pattern "antidepressant_*_learning_disability_total_rate"
+            --output-dir output/lda/joined/summary
+            --output-name "learning_disability_prescribing"
+            --date-lines "2020-03-16" "2020-12-02"
+            --scale "rate"
+            --confidence-intervals
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/joined/summary/learning_disability_prescribing.png
+
+  generate_lda_autism_prescribing:
+    run: >
+            python:latest python analysis/panel_plots.py
+            --input-file output/lda/joined/summary/measure_lda.csv
+            --measures-pattern "antidepressant_*_autism_total_rate"
+            --output-dir output/lda/joined/summary
+            --output-name "autism_prescribing"
+            --date-lines "2020-03-16" "2020-12-02"
+            --scale "rate"
+            --confidence-intervals
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/joined/summary/autism_prescribing.png
+
+  generate_lda_all_breakdowns:
+    run: >
+            python:latest python analysis/panel_plots.py
+            --input-file output/lda/joined/summary/measure_lda.csv
+            --measures-pattern "antidepressant_*_all_breakdown_*_rate"
+            --output-dir output/lda/joined/summary
+            --output-name "any_antidepressant_by_demographic_group"
+            --date-lines "2020-03-16" "2020-12-02"
+            --scale "rate"
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/joined/summary/any_antidepressant_by_demographic_group.png
+
+  generate_lda_learning_disability_breakdown:
+    run: >
+            python:latest python analysis/panel_plots.py
+            --input-file output/lda/joined/summary/measure_lda.csv
+            --measures-pattern "antidepressant_*_learning_disability_breakdown_*_rate"
+            --output-dir output/lda/joined/summary
+            --output-name "learning_disability_any_antidepressant_by_demographic_group"
+            --date-lines "2020-03-16" "2020-12-02"
+            --scale "rate"
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/joined/summary/learning_disability_any_antidepressant_by_demographic_group.png
+
+  generate_lda_autism_breakdown:
+    run: >
+            python:latest python analysis/panel_plots.py
+            --input-file output/lda/joined/summary/measure_lda.csv
+            --measures-pattern "antidepressant_*_autism_breakdown_*_rate"
+            --output-dir output/lda/joined/summary
+            --output-name "autism_any_antidepressant_by_demographic_group"
+            --date-lines "2020-03-16" "2020-12-02"
+            --scale "rate"
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/joined/summary/autism_any_antidepressant_by_demographic_group.png
 
   generate_table1:
     run: >
