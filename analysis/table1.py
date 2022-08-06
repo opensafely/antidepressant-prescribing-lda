@@ -18,7 +18,7 @@ def get_month(input_dir, measure_attribute, d):
     Use measures small number suppression for consistency with measures results
     Get the first month
     """
-    path = input_dir / "measure_{}_all_{}_rate.csv".format(
+    path = input_dir / "measure_{}_all_breakdown_{}_rate.csv".format(
         measure_attribute, d
     )
 
