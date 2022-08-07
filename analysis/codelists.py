@@ -114,6 +114,13 @@ qualifier_codes = codelist_from_csv(
     column="code",
 )
 
+# Anxiety codes
+anxiety_codes = codelist_from_csv(
+    "codelists/opensafely-anxiety-disorders.csv",
+    system="snomed",
+    column="code",
+)
+
 # Variables
 
 # Ethnicity

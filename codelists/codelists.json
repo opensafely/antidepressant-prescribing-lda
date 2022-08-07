@@ -36,6 +36,12 @@
       "downloaded_at": "2022-06-16 16:58:37.645946Z",
       "sha": "748a22780ec7c3e7ba9970d9bd80841f07ae259d"
     },
+    "opensafely-anxiety-disorders.csv": {
+      "id": "opensafely/anxiety-disorders/6aef605a",
+      "url": "https://codelists.opensafely.org/codelist/opensafely/anxiety-disorders/6aef605a/",
+      "downloaded_at": "2022-08-06 13:06:17.445446Z",
+      "sha": "7bd08502a20c7e84587944da97f66cae7c6fd19b"
+    },
     "nhsd-primary-care-domain-refsets-depres_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/depres_cod/20200812",
       "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/depres_cod/20200812/",

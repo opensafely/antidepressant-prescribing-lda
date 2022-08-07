@@ -17,6 +17,7 @@ from cohortextractor import (
 
 # Import codelists from codelist.py (which pulls them from the codelist folder)
 from codelists import (
+    anxiety_codes,
     ssri_codes,
     tricyclic_codes,
     maoi_codes,
@@ -180,13 +181,86 @@ study = StudyDefinition(
         """,
     ),
     **create_subgroups(),
+    antidepressant_any_18=patients.satisfying(
+        """
+        antidepressant_any AND
+        depression_list_type
+        """,
+    ),
+    depression_list_type_autism=patients.satisfying(
+        """
+        depression_list_type AND
+        aut
+        """,
+    ),
+    antidepressant_any_18_autism=patients.satisfying(
+        """
+        antidepressant_any AND
+        depression_list_type_autism
+        """,
+    ),
+    depression_list_type_learning_disability=patients.satisfying(
+        """
+        depression_list_type AND
+        ld
+        """,
+    ),
+    antidepressant_any_18_learning_disability=patients.satisfying(
+        """
+        antidepressant_any AND
+        depression_list_type_learning_disability
+        """,
+    ),
+    anxiety=patients.with_these_clinical_events(
+        codelist=anxiety_codes,
+        returning="binary_flag",
+        find_last_match_in_period=True,
+        on_or_before="last_day_of_month(index_date)",
+        return_expectations={"incidence": 0.01},
+    ),
+    diagnosis=patients.categorised_as(
+        {
+            "Unknown": "DEFAULT",
+            "Depression register": "depression_register AND NOT anxiety",
+            "Anxiety": "anxiety AND NOT depression_register",
+            "Both": "depression_register AND anxiety",
+            "Neither": "NOT anxiety AND NOT depression_register",
+        },
+        return_expectations={
+            "rate": "universal",
+            "category": {
+                "ratios": {
+                    "Unknown": 0.0,
+                    "Depression register": 0.4,
+                    "Anxiety": 0.2,
+                    "Both": 0.3,
+                    "Neither": 0.1,
+                },
+            },
+        },
+    ),
 )
 
 # --- DEFINE MEASURES ---
 
-#  QOF Measures
-
-measures = []
+measures = [
+    Measure(
+        id="antidepressant_any_all_breakdown_diagnosis_rate",
+        numerator="antidepressant_any_18",
+        denominator="depression_list_type",
+        group_by=["diagnosis"],
+        small_number_suppression=True,
+    ),
+]
+for group_label, group in lda_subgroups.items():
+    m = Measure(
+        id=f"antidepressant_any_{group_label}_breakdown_diagnosis_rate",
+        numerator=f"antidepressant_any_18_{group_label}",
+        denominator=f"depression_list_type_{group_label}",
+        group_by=["diagnosis"],
+        small_number_suppression=True,
+    )
+    measures.append(m)
 
 for antidepressant_group in antidepressant_groups:
     m = Measure(
@@ -227,7 +301,8 @@ for antidepressant_group in antidepressant_groups:
 # Demographic trends in prescribing for each at-risk group
 # Use a set difference because there are some categories that are both
 # lda subgroups and demographic groups
-for d in list(set(demographics) - set(lda_subgroups.keys())):
+breakdown_list = list(set(demographics) - set(lda_subgroups.keys()))
+for d in breakdown_list:
     m = Measure(
         id=f"antidepressant_any_all_breakdown_{d}_rate",
         numerator="antidepressant_any",

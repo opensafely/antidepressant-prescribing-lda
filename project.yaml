@@ -32,7 +32,7 @@ actions:
 
   # Generate prescription variables by month
   generate_study_population_lda:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2020-01-01 to 2022-04-01 by month" --output-format=csv.gz --output-dir output/lda
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/lda
     outputs:
       highly_sensitive:
         cohort: output/lda/input_lda_*.csv.gz
