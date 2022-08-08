@@ -36,12 +36,15 @@ def check_register(df, depression_codes_2019):
         depression_codes_2019.index
     )
 
+    fixed_null_date = df["depr_lat_date"] == "1900-01-01"
+
     output = {
         "before_2006": before_2006.sum(),
         "resolved": resolved.sum(),
         "under_18": under_18.sum(),
         "resolved_same_day": resolved_same_day.sum(),
         "v42_codes": v42_codes.sum(),
+        "fixed_null_date": fixed_null_date.sum(),
     }
     return pandas.DataFrame(list(output.items()))
 
@@ -66,8 +69,12 @@ def plot_dates(df):
 
 def plot_diagnoses(df):
     figure = plt.figure()
-    multiple_15mo_depression = df[df["depression_15mo_count"] > 0]["depression_15mo_count"]
-    multiple_15mo_depression.plot.hist(title="Count of 15mo Depression Diagnosis")
+    multiple_15mo_depression = df[df["depression_15mo_count"] > 0][
+        "depression_15mo_count"
+    ]
+    multiple_15mo_depression.plot.hist(
+        title="Count of 15mo Depression Diagnosis"
+    )
 
 
 def check_indicator(df, depression_codes_2019):
@@ -77,7 +84,9 @@ def check_indicator(df, depression_codes_2019):
     population_1 = df["depression_register"] & ~df["depression_list_type"]
 
     multiple_depression = df["depr_lat_count"]
-    multiple_15mo_depression = df[df["depression_15mo_count"] > 0]["depression_15mo_count"]
+    multiple_15mo_depression = df[df["depression_15mo_count"] > 0][
+        "depression_15mo_count"
+    ]
     multiple_reviews = df["review_12mo_count"]
 
     missing_with_multiple = ~df["dep003_numerator"] & (
