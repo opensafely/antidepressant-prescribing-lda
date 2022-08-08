@@ -6,6 +6,8 @@ end_date = "2020-04-01"
 
 # depression register start date
 depr_register_date = "2006-04-01"
+# day to check for ongoing depression
+register_ongoing_date = "2006-03-31"
 
 # demographic variables by which code use is broken down
 demographics = [

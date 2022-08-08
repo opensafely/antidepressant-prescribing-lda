@@ -21,7 +21,7 @@ from codelists import (
     qualifier_codes,
 )
 
-from config import depr_register_date
+from config import depr_register_date, register_ongoing_date
 
 depression_register_variables = dict(
     # Depression register:  Patients aged at least 18 years old whose latest
@@ -113,7 +113,7 @@ depression_register_variables = dict(
     # Ongoing episode of depression prior to depr_register_date
     # TODO: with on_or_before double counting register date
     previous_depr=patients.with_these_clinical_events(
-        on_or_before=depr_register_date,
+        on_or_before=register_ongoing_date,
         codelist=depression_codes,
         returning="binary_flag",
         find_last_match_in_period=True,
@@ -121,7 +121,7 @@ depression_register_variables = dict(
         date_format="YYYY-MM-DD",
     ),
     previous_depr_code=patients.with_these_clinical_events(
-        on_or_before=depr_register_date,
+        on_or_before=register_ongoing_date,
         codelist=depression_codes,
         returning="code",
         find_last_match_in_period=True,
