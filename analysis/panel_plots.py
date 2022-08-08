@@ -104,7 +104,12 @@ def plot_cis(ax, data, title):
 
 
 def get_group_chart(
-    measure_table, columns=2, date_lines=None, scale=None, ci=False
+    measure_table,
+    columns=2,
+    date_lines=None,
+    scale=None,
+    ci=False,
+    exclude_group=None,
 ):
     figure = plt.figure(figsize=(columns * 6, columns * 5))
     measure_table.set_index("date", inplace=True)
@@ -122,17 +127,21 @@ def get_group_chart(
     if total_plots % columns > 0:
         rows = rows + 1
 
-    for index, group in enumerate(groups):
+    for index, panel_group in enumerate(groups):
         ax = figure.add_subplot(rows, columns, index + 1)
         ax.autoscale(enable=True, axis="y")
         title = translate_group(
-            group[1].category[0], group[0], repeated, autolabel=True
+            panel_group[1].category[0],
+            panel_group[0],
+            repeated,
+            autolabel=True,
         )
         # If there is only one group, add confidence intervals
-        if ci and len(set(group[1].group)) == 1:
-            plot_cis(ax, group[1], title=title)
+        if ci and len(set(panel_group[1].group)) == 1:
+            plot_cis(ax, panel_group[1], title=title)
         else:
-            group[1].groupby("group").value.plot(
+            filtered = panel_group[1][panel_group[1].group != exclude_group]
+            filtered.groupby("group").value.plot(
                 legend=True, ax=ax, title=title
             )
             # TODO: determine whether tight_layout is sufficient
@@ -229,6 +238,10 @@ def parse_args():
              NOTE: only supported for single group",
              """,
     )
+    parser.add_argument(
+        "--exclude-group",
+        help="Exclude group with this label from plot, e.g. Unknown",
+    )
     return parser.parse_args()
 
 
@@ -242,6 +255,7 @@ def main():
     date_lines = args.date_lines
     scale = args.scale
     confidence_intervals = args.confidence_intervals
+    exclude_group = args.exclude_group
 
     measure_table = get_measure_tables(input_file)
 
@@ -255,6 +269,7 @@ def main():
         date_lines=date_lines,
         scale=scale,
         ci=confidence_intervals,
+        exclude_group=exclude_group,
     )
     write_group_chart(chart, output_dir / output_name, plot_title)
     chart.close()

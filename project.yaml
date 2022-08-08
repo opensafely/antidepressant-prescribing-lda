@@ -232,6 +232,7 @@ actions:
             --output-name "any_antidepressant_by_demographic_group"
             --date-lines "2020-03-16" "2020-12-02"
             --scale "rate"
+            --exclude-group "Unknown"
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
@@ -246,6 +247,7 @@ actions:
             --output-name "learning_disability_any_antidepressant_by_demographic_group"
             --date-lines "2020-03-16" "2020-12-02"
             --scale "rate"
+            --exclude-group "Unknown"
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
@@ -260,6 +262,7 @@ actions:
             --output-name "autism_any_antidepressant_by_demographic_group"
             --date-lines "2020-03-16" "2020-12-02"
             --scale "rate"
+            --exclude-group "Unknown"
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
