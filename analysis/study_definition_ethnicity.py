@@ -24,9 +24,10 @@ study = StudyDefinition(
             "Unknown": "DEFAULT",
             "White": "eth='1'",
             "Mixed": "eth='2'",
-            "Asian": "eth='3'",
-            "Black": "eth='4'",
-            "Other": "eth='5'",
+            "Asian or Asian British": "eth='3'",
+            "Black or Black British": "eth='4'",
+            "Chinese or Other": "eth='5'",
+            "Not stated": "eth='6'",
         },
         eth=patients.with_these_clinical_events(
             ethnicity_codes_6,
@@ -40,7 +41,8 @@ study = StudyDefinition(
                         "2": 0.2,
                         "3": 0.2,
                         "4": 0.2,
-                        "5": 0.2,
+                        "5": 0.1,
+                        "6": 0.1,
                     }
                 },
                 "incidence": 0.75,
@@ -52,10 +54,10 @@ study = StudyDefinition(
                 "ratios": {
                     "White": 0.2,
                     "Mixed": 0.2,
-                    "Asian": 0.2,
-                    "Black": 0.2,
-                    "Other": 0.1,
-                    "Unknown": 0.1,
+                    "Asian or Asian British": 0.2,
+                    "Black or Black British": 0.2,
+                    "Chinese or Other": 0.1,
+                    "Not stated": 0.1,
                 }
             },
         },
