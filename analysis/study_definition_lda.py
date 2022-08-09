@@ -245,7 +245,7 @@ study = StudyDefinition(
 
 measures = [
     Measure(
-        id="antidepressant_any_all_breakdown_diagnosis_rate",
+        id="antidepressant_any_all_breakdown_diagnosis_18+_rate",
         numerator="antidepressant_any_18",
         denominator="depression_list_type",
         group_by=["diagnosis"],
@@ -254,7 +254,7 @@ measures = [
 ]
 for group_label, group in lda_subgroups.items():
     m = Measure(
-        id=f"antidepressant_any_{group_label}_breakdown_diagnosis_rate",
+        id=f"antidepressant_any_{group_label}_breakdown_diagnosis_18+_rate",
         numerator=f"antidepressant_any_18_{group_label}",
         denominator=f"depression_list_type_{group_label}",
         group_by=["diagnosis"],
