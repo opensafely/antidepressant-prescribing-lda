@@ -18,6 +18,7 @@ from codelists import (
     depression_review_unsuitable_codes,
     depression_review_dissent_codes,
     depression_invitation_codes,
+    depression_diagnosis_or_review_codes,
 )
 
 from config import start_date, depr_register_date
@@ -254,7 +255,7 @@ depression_indicator_variables = dict(
     # including the achievement date.
     # Between is inclusive
     review_10_to_56d=patients.with_these_clinical_events(
-        codelist=depression_review_codes,
+        codelist=depression_diagnosis_or_review_codes,
         returning="binary_flag",
         find_first_match_in_period=True,
         include_date_of_match=True,

@@ -11,7 +11,7 @@
 # --- IMPORT STATEMENTS ---
 
 # Import code building blocks from cohort extractor package
-from cohortextractor import codelist_from_csv
+from cohortextractor import codelist_from_csv, combine_codelists
 
 
 # --- CODELISTS ---
@@ -117,6 +117,10 @@ ongoing_codes = codelist_from_csv(
     "codelists/user-ccunningham-ongoing_qualifiers.csv",
     system="snomed",
     column="code",
+)
+
+depression_diagnosis_or_review_codes = combine_codelists(
+    depression_codes, depression_review_codes
 )
 
 # Variables
