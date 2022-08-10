@@ -86,19 +86,17 @@ def filename_to_title(filename):
     return filename.replace("_", " ").title()
 
 
-def plot_cis(ax, data, title):
-    y = data.value
-    x = data.index
-    stats = y.agg(["mean", "sem"])
-    stats["ci95hi"] = stats["mean"] + 1.96 * stats["sem"]
-    stats["ci95lo"] = stats["mean"] - 1.96 * stats["sem"]
-    ax.plot(x, y)
-    ax.set_title(title)
+def plot_cis(ax, data):
+    data["ci95hi"] = data["value"] + 1.96 * (
+        numpy.sqrt(data["value"] * (1 - data["value"]) / data["denominator"])
+    )
+    data["ci95lo"] = data["value"] - 1.96 * (
+        numpy.sqrt(data["value"] * (1 - data["value"]) / data["denominator"])
+    )
     ax.fill_between(
-        x,
-        (y - stats["ci95lo"]),
-        (y + stats["ci95hi"]),
-        color="b",
+        data.index,
+        (data["ci95lo"]),
+        (data["ci95hi"]),
         alpha=0.1,
     )
 
@@ -136,14 +134,14 @@ def get_group_chart(
             repeated,
             autolabel=True,
         )
-        # If there is only one group, add confidence intervals
-        if ci and len(set(panel_group[1].group)) == 1:
-            plot_cis(ax, panel_group[1], title=title)
-        else:
-            filtered = panel_group[1][panel_group[1].group != exclude_group]
-            filtered.groupby("group").value.plot(
-                legend=True, ax=ax, title=title
+        ax.set_title(title)
+        filtered = panel_group[1][panel_group[1].group != exclude_group]
+        for plot_group, plot_group_data in filtered.groupby("group"):
+            ax.plot(
+                plot_group_data.index, plot_group_data.value, label=plot_group
             )
+            if ci:
+                plot_cis(ax, plot_group_data)
             # TODO: determine whether tight_layout is sufficient
             # plt.legend(
             #    bbox_to_anchor=(0.5, -0.8),
@@ -151,7 +149,7 @@ def get_group_chart(
             #    fontsize="x-small",
             #    ncol=4,
             # )
-            plt.legend(fontsize="x-small", ncol=4)
+        plt.legend(fontsize="x-small", ncol=4)
         ax.set_xlabel("")
         ax.tick_params(axis="x", labelsize=7)
         if date_lines:
