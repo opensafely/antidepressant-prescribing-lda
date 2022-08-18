@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dataset Report</title>
+    <style>
+        section {
+            max-width: fit-content;
+        }
+    </style>
+</head>
+
+<body>
+    <article>
+        <h1>Dataset Report</h1>
+        <p><em>{{ input_file }}</em></p>
+        <h2>Summary</h2>
+        {{ table_summary }}
+        <h2>Columns</h2>
+        <p>Only columns that dataset-report can summarize are shown.</p>
+        {% for column_name, column_summary in column_summaries %}
+        <section>
+            <h3>{{ column_name }}</h3>
+            {{ column_summary }}
+        </section>
+        {% endfor %}
+    </article>
+</body>
+
+</html>

@@ -62,7 +62,7 @@ actions:
   # Generate dataset report
   generate_dataset_report:
     run: >
-      dataset-report:v0.0.19
+      python:latest python analysis/dataset_report.py
         --input-files output/qof/input_*.csv.gz
         --output-dir output/qof/
     needs: [generate_study_population_register, generate_study_population_dep003]
