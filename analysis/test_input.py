@@ -36,7 +36,9 @@ def check_register(df, depression_codes_2019):
         depression_codes_2019.index
     )
 
-    fixed_null_date = df["depr_lat_date"] == "1900-01-01"
+    # Check whether events with a fixed null have a true binary variable
+    fixed_null_date = df["previous_depr_date"] <= "1900-01-01"
+    fixed_null_date_and_true = fixed_null_date & df["previous_depr"]
 
     output = {
         "before_2006": before_2006.sum(),
@@ -45,6 +47,7 @@ def check_register(df, depression_codes_2019):
         "resolved_same_day": resolved_same_day.sum(),
         "v42_codes": v42_codes.sum(),
         "fixed_null_date": fixed_null_date.sum(),
+        "fixed_null_date_and_true": fixed_null_date.sum(),
     }
     return pandas.DataFrame(list(output.items()))
 
