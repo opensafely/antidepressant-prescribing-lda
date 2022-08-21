@@ -2,7 +2,7 @@ import argparse
 import pathlib
 import re
 import glob
-
+import numpy
 import pandas
 
 MEASURE_FNAME_REGEX = re.compile(r"measure_(?P<id>\S+)\.csv")
@@ -61,7 +61,6 @@ def _join_tables(tables):
 def get_measure_tables(input_files):
     for input_file in input_files:
         measure_fname_match = re.match(MEASURE_FNAME_REGEX, input_file.name)
-        print(input_file, measure_fname_match)
         if measure_fname_match is not None:
             # The `date` column is assigned by the measures framework.
             measure_table = pandas.read_csv(input_file, parse_dates=["date"])
@@ -84,6 +83,34 @@ def _round_table(measure_table, round_to):
     )
     # recompute value
     measure_table.value = measure_table.numerator / measure_table.denominator
+    return measure_table
+
+
+def _redact_zeroes(measure_table):
+    """
+    The measures framework does not redact zeroes
+    Not compulsory, but better to include in redaction
+    A group could have the name 0, so apply to specific columns
+    The value column is recomputed, so we can skip
+    """
+    measure_table.numerator = measure_table.numerator.replace(0, numpy.nan)
+    measure_table.denominator = measure_table.denominator.replace(0, numpy.nan)
+    return measure_table
+
+
+def _redacted_string(measure_table):
+    """
+    Replace redacted values with "[REDACTED]" string
+    A group could have the name NaN, so apply to specific columns
+    """
+    REDACTED_STR = "[REDACTED]"
+    measure_table.numerator = measure_table.numerator.replace(
+        numpy.nan, REDACTED_STR
+    )
+    measure_table.denominator = measure_table.denominator.replace(
+        numpy.nan, REDACTED_STR
+    )
+    measure_table.value = measure_table.value.replace(numpy.nan, REDACTED_STR)
     return measure_table
 
 
@@ -161,8 +188,10 @@ def main():
     tables = []
     for measure_table in get_measure_tables(input_list or input_files):
         table = _reshape_data(measure_table)
-        rounded = _round_table(table, round_to)
-        tables.append(rounded)
+        no_zeroes = _redact_zeroes(table)
+        rounded = _round_table(no_zeroes, round_to)
+        redacted_str = _redacted_string(rounded)
+        tables.append(redacted_str)
 
     output = _join_tables(tables)
     _check_for_practice(output)

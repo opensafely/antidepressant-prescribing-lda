@@ -32,6 +32,22 @@ def subset_table(measure_table, measures_pattern, measures_list):
     return measure_table[measure_table["name"].isin(measures_list)]
 
 
+def coerce_numeric(table):
+    """
+    The denominator and value columns should contain only numeric values
+    Other values, such as the REDACTED string, or values introduced by error,
+    should not be plotted
+    Use a copy to avoid SettingWithCopyWarning
+    Leave NaN values in df so missing data are not inferred
+    """
+    coerced = table.copy()
+    coerced["denominator"] = pandas.to_numeric(
+        coerced["denominator"], errors="coerce"
+    )
+    coerced["value"] = pandas.to_numeric(coerced["value"], errors="coerce")
+    return coerced
+
+
 def scale_thousand(ax):
     """
     Scale a proportion for rate by 1000
@@ -136,7 +152,8 @@ def get_group_chart(
         )
         ax.set_title(title)
         filtered = panel_group[1][panel_group[1].group != exclude_group]
-        for plot_group, plot_group_data in filtered.groupby("group"):
+        numeric = coerce_numeric(filtered)
+        for plot_group, plot_group_data in numeric.groupby("group"):
             ax.plot(
                 plot_group_data.index, plot_group_data.value, label=plot_group
             )
