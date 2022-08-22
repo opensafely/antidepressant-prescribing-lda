@@ -64,7 +64,7 @@ def create_antidepressant_vars():
                     "last_day_of_month(index_date)",
                 ],
             ),
-            f"{name}_new": patients.with_these_medications(
+            f"{name}_previous": patients.with_these_medications(
                 codelist=codelist,
                 returning="binary_flag",
                 find_last_match_in_period=True,
@@ -74,6 +74,12 @@ def create_antidepressant_vars():
                     f"{name}_date - 2 years",
                     f"{name}_date - 1 day",
                 ],
+            ),
+            f"{name}_new": patients.satisfying(
+                f"""
+                {name} AND
+                NOT {name}_previous
+                """,
             ),
         }
 
