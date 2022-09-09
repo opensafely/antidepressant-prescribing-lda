@@ -21,22 +21,22 @@ from cohortextractor import codelist_from_csv
 
 # Selective serotonin reputake inhibitors
 ssri_codes = codelist_from_csv(
-    "codelists/opensafely-selective-serotonin-reuptake-inhibitors-dmd.csv",
+    "local_codelists/opensafely-selective-serotonin-reuptake-inhibitors-dmd_new.csv",
     system="snomed",
     column="dmd_id",
 )
 tricyclic_codes = codelist_from_csv(
-    "codelists/opensafely-tricyclic-and-related-antidepressants-dmd.csv",
+    "local_codelists/opensafely-tricyclic-and-related-antidepressants-dmd_new.csv",
     system="snomed",
     column="dmd_id",
 )
 maoi_codes = codelist_from_csv(
-    "codelists/opensafely-monoamine-oxidase-inhibitors-dmd.csv",
+    "local_codelists/opensafely-monoamine-oxidase-inhibitors-dmd_new.csv",
     system="snomed",
     column="dmd_id",
 )
 other_antidepressant_codes = codelist_from_csv(
-    "codelists/opensafely-other-antidepressants-dmd.csv",
+    "local_codelists/opensafely-other-antidepressants-dmd_new.csv",
     system="snomed",
     column="dmd_id",
 )
