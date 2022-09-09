@@ -282,13 +282,14 @@ actions:
   generate_table1:
     run: >
             python:latest python analysis/table1.py
-            --input-dir output/lda/joined
-            --output-dir output/lda/joined
-            --measure-attribute "antidepressant_any"
-    needs: [generate_measures_lda]
+            --input-file output/lda/joined/summary/measure_lda.csv
+            --output-dir output/lda/joined/summary
+            --measures-pattern "antidepressant_any_*_breakdown_*_rate"
+            --column-names "all" "learning_disability" "autism"
+    needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
-        cohort: output/lda/joined/table1.csv
+        cohort: output/lda/joined/summary/table1.html
 
   #############################
   # Display
