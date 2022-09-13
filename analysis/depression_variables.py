@@ -18,7 +18,6 @@ from codelists import (
     depression_review_unsuitable_codes,
     depression_review_dissent_codes,
     depression_invitation_codes,
-    qualifier_codes,
 )
 
 from config import depr_register_date, register_ongoing_date
@@ -51,30 +50,6 @@ depression_register_variables = dict(
         find_last_match_in_period=True,
         include_date_of_match=True,
         date_format="YYYY-MM-DD",
-    ),
-    depr_lat_count=patients.with_these_clinical_events(
-        between=[
-            depr_register_date,
-            "last_day_of_month(index_date)",
-        ],
-        codelist=depression_codes,
-        return_number_of_matches_in_period=True,
-        return_expectations={
-            "int": {"distribution": "normal", "mean": 3, "stddev": 1},
-            "incidence": 1,
-        },
-    ),
-    depr_lat_code=patients.with_these_clinical_events(
-        between=[
-            depr_register_date,
-            "last_day_of_month(index_date)",
-        ],
-        codelist=depression_codes,
-        returning="code",
-        find_last_match_in_period=True,
-        return_expectations={
-            "category": {"ratios": {"10": 0.2, "11": 0.3, "12": 0.5}}
-        },
     ),
     # Date of the first episode of depression up to and including the
     # achievement date.
@@ -133,8 +108,6 @@ depression_register_variables = dict(
         between=["previous_depr_date", "depr_date"],
         codelist=depression_resolved_codes,
         find_last_match_in_period=True,
-        include_date_of_match=True,
-        date_format="YYYY-MM-DD",
         returning="binary_flag",
     ),
     ongoing_episode=patients.satisfying(
@@ -171,7 +144,6 @@ depression_indicator_variables = dict(
     depression_15mo=patients.with_these_clinical_events(
         codelist=depression_codes,
         returning="binary_flag",
-        ignore_days_where_these_codes_occur=qualifier_codes,
         find_last_match_in_period=True,
         between=[
             "first_day_of_month(index_date) - 14 months",

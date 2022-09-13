@@ -68,8 +68,6 @@ def create_antidepressant_vars():
                 codelist=codelist,
                 returning="binary_flag",
                 find_last_match_in_period=True,
-                include_date_of_match=True,
-                date_format="YYYY-MM-DD",
                 between=[
                     f"{name}_date - 2 years",
                     f"{name}_date - 1 day",
@@ -104,6 +102,20 @@ def create_subgroups():
 
     variables = {}
     for group_label, group in lda_subgroups.items():
+        variables.update(
+            var_signature(
+                f"depression_register_{group_label}",
+                group,
+                "depression_register",
+            )
+        )
+        variables.update(
+            var_signature(
+                f"depression_new_{group_label}",
+                group,
+                "depression_new",
+            )
+        )
         for antidepressant_group in antidepressant_groups:
             variables.update(
                 var_signature(
@@ -186,6 +198,8 @@ study = StudyDefinition(
         antidepressant_other_new
         """,
     ),
+    # Subgroups variables for measures framework
+    # Needed because the measures framework is a ratio, not a rate
     **create_subgroups(),
     antidepressant_any_18=patients.satisfying(
         """
@@ -257,6 +271,20 @@ measures = [
         group_by=["diagnosis"],
         small_number_suppression=True,
     ),
+    Measure(
+        id="depression_all_total_rate",
+        numerator="depression_register",
+        denominator="depression_list_type",
+        group_by="population",
+        small_number_suppression=True,
+    ),
+    Measure(
+        id="depression_new_all_total_rate",
+        numerator="depression_new",
+        denominator="depression_list_type",
+        group_by="population",
+        small_number_suppression=True,
+    ),
 ]
 for group_label, group in lda_subgroups.items():
     m = Measure(
@@ -264,6 +292,22 @@ for group_label, group in lda_subgroups.items():
         numerator=f"antidepressant_any_18_{group_label}",
         denominator=f"depression_list_type_{group_label}",
         group_by=["diagnosis"],
+        small_number_suppression=True,
+    )
+    measures.append(m)
+    m = Measure(
+        id=f"depression_{group_label}_total_rate",
+        numerator=f"depression_register_{group_label}",
+        denominator=f"depression_list_type_{group_label}",
+        group_by="population",
+        small_number_suppression=True,
+    )
+    measures.append(m)
+    m = Measure(
+        id=f"depression_new_{group_label}_total_rate",
+        numerator=f"depression_new_{group_label}",
+        denominator=f"depression_list_type_{group_label}",
+        group_by="population",
         small_number_suppression=True,
     )
     measures.append(m)

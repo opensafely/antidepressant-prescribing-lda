@@ -8,7 +8,7 @@ import pandas
 import matplotlib.pyplot as plt
 
 
-def check_register(df, depression_codes_2019):
+def check_register(df):
     before_2006 = df["depression_register"] & (
         pandas.to_datetime(df["depr_lat_date"])
         < pandas.to_datetime("2006-04-01")
@@ -32,10 +32,6 @@ def check_register(df, depression_codes_2019):
         & (df["depr_lat_date"] == df["depr_res_date"])
     )
 
-    v42_codes = df["depression_register"] & df["depr_lat_code"].isin(
-        depression_codes_2019.index
-    )
-
     # Check whether events with a fixed null have a true binary variable
     fixed_null_date = df["previous_depr_date"] <= "1900-01-01"
     fixed_null_date_and_true = fixed_null_date & df["previous_depr"]
@@ -45,9 +41,8 @@ def check_register(df, depression_codes_2019):
         "resolved": resolved.sum(),
         "under_18": under_18.sum(),
         "resolved_same_day": resolved_same_day.sum(),
-        "v42_codes": v42_codes.sum(),
         "fixed_null_date": fixed_null_date.sum(),
-        "fixed_null_date_and_true": fixed_null_date.sum(),
+        "fixed_null_date_and_true": fixed_null_date_and_true.sum(),
     }
     return pandas.DataFrame(list(output.items()))
 
@@ -71,7 +66,7 @@ def plot_dates(df):
 
 
 def plot_diagnoses(df):
-    figure = plt.figure()
+    plt.figure()
     multiple_15mo_depression = df[df["depression_15mo_count"] > 0][
         "depression_15mo_count"
     ]
@@ -80,13 +75,12 @@ def plot_diagnoses(df):
     )
 
 
-def check_indicator(df, depression_codes_2019):
+def check_indicator(df):
     # Population
     # Everyone on the register should be of depression list type
     # NOTE: assert=0
     population_1 = df["depression_register"] & ~df["depression_list_type"]
 
-    multiple_depression = df["depr_lat_count"]
     multiple_15mo_depression = df[df["depression_15mo_count"] > 0][
         "depression_15mo_count"
     ]
@@ -259,22 +253,8 @@ def check_indicator(df, depression_codes_2019):
         & (review_diff_2 < 57)
     )
 
-    numerator_python_any = (
-        numerator_python | numerator_python_1 | numerator_python_2
-    )
-
-    numerator_review = df["diagnosis_10_to_56d"]
-
-    numerator_v42 = df["dep003_numerator"] & df["depr_lat_code"].isin(
-        depression_codes_2019.index
-    )
-    denominator_v42 = df["dep003_denominator"] & df["depr_lat_code"].isin(
-        depression_codes_2019.index
-    )
-
     output = {
         "population_1": population_1.sum(),
-        "multiple_depression": multiple_depression.mean(),
         "multiple_15mo_depression": multiple_15mo_depression.mean(),
         "multiple_reviews": multiple_reviews.mean(),
         "missing_with_multiple": missing_with_multiple.sum(),
@@ -302,10 +282,6 @@ def check_indicator(df, depression_codes_2019):
         "numerator_python": numerator_python.sum(),
         "numerator_python_1": numerator_python_1.sum(),
         "numerator_python_2": numerator_python_2.sum(),
-        "numerator_python_any": numerator_python_any.sum(),
-        "numerator_review": numerator_review.sum(),
-        "numerator_v42": numerator_v42.sum(),
-        "denominator_v42": denominator_v42.sum(),
     }
     return pandas.DataFrame(list(output.items()))
 
@@ -376,26 +352,18 @@ def main():
     input_files = args.input_files
     output_dir = args.output_dir
 
-    depression_codes_2019 = read_dataframe(
-        pathlib.Path("codelists/user-ccunningham-depr_cod_qof_v042.csv")
-    ).set_index("code")
-
     output_dir.mkdir(exist_ok=True)
     for input_table in get_input_table(input_files):
         fname = input_table.attrs["fname"]
         # TODO: come up with a better way to do this
         if "dep003" in fname:
-            register_results = check_register(
-                input_table, depression_codes_2019
-            )
-            indicator_results = check_indicator(
-                input_table, depression_codes_2019
-            )
+            register_results = check_register(input_table)
+            indicator_results = check_indicator(input_table)
             test_results = pandas.concat([register_results, indicator_results])
             plot_diagnoses(input_table)
             plt.savefig(output_dir / input_table.attrs["plot_name"])
         elif "register" in fname:
-            test_results = check_register(input_table, depression_codes_2019)
+            test_results = check_register(input_table)
         else:
             return
         write_input_table(test_results, output_dir / fname)
