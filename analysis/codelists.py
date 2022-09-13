@@ -107,13 +107,6 @@ depression_invitation_codes = codelist_from_csv(
     column="code",
 )
 
-# Qualifier codes
-qualifier_codes = codelist_from_csv(
-    "codelists/user-ccunningham-ongoing_qualifiers.csv",
-    system="snomed",
-    column="code",
-)
-
 # Anxiety codes
 anxiety_codes = codelist_from_csv(
     "codelists/opensafely-anxiety-disorders.csv",
