@@ -193,7 +193,7 @@ actions:
     run: >
             python:latest python analysis/panel_plots.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
-            --measures-pattern "antidepressant_*_all_total_rate"
+            --measures-pattern "*_all_total_rate"
             --output-dir output/lda/codelist_update/joined/summary
             --output-name "total_population_prescribing"
             --date-lines "2020-03-16" "2020-12-02"
@@ -208,7 +208,7 @@ actions:
     run: >
             python:latest python analysis/panel_plots.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
-            --measures-pattern "antidepressant_*_learning_disability_total_rate"
+            --measures-pattern "*_learning_disability_total_rate"
             --output-dir output/lda/codelist_update/joined/summary
             --output-name "learning_disability_prescribing"
             --date-lines "2020-03-16" "2020-12-02"
@@ -223,7 +223,7 @@ actions:
     run: >
             python:latest python analysis/panel_plots.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
-            --measures-pattern "antidepressant_*_autism_total_rate"
+            --measures-pattern "*_autism_total_rate"
             --output-dir output/lda/codelist_update/joined/summary
             --output-name "autism_prescribing"
             --date-lines "2020-03-16" "2020-12-02"
