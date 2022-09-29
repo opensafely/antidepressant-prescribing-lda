@@ -125,7 +125,9 @@ def get_group_chart(
     ci=False,
     exclude_group=None,
 ):
-    figure = plt.figure(figsize=(columns * 6, columns * 5))
+    figure = plt.figure(
+        figsize=(columns * 6, columns * 5), constrained_layout=True
+    )
     measure_table.set_index("date", inplace=True)
 
     repeated = autoselect_labels(measure_table["name"])
@@ -141,6 +143,7 @@ def get_group_chart(
     if total_plots % columns > 0:
         rows = rows + 1
 
+    lgds = []
     for index, panel_group in enumerate(groups):
         ax = figure.add_subplot(rows, columns, index + 1)
         ax.autoscale(enable=True, axis="y")
@@ -159,16 +162,14 @@ def get_group_chart(
             )
             if ci:
                 plot_cis(ax, plot_group_data)
-            # TODO: determine whether tight_layout is sufficient
-            # plt.legend(
-            #    bbox_to_anchor=(0.5, -0.8),
-            #    loc="lower center",
-            #    fontsize="x-small",
-            #    ncol=4,
-            # )
-        plt.legend(fontsize="x-small", ncol=4)
-        ax.set_xlabel("")
-        ax.tick_params(axis="x", labelsize=7)
+            lgd = ax.legend(
+                bbox_to_anchor=(1, 1),
+                loc="upper left",
+                fontsize="x-small",
+            )
+            lgds.append(lgd)
+            ax.set_xlabel("")
+            ax.tick_params(axis="x", labelsize=7)
         if date_lines:
             min_date = min(measure_table.index)
             max_date = max(measure_table.index)
@@ -177,17 +178,13 @@ def get_group_chart(
             scale_hundred(ax)
         elif scale == "rate":
             scale_thousand(ax)
-    figure.tight_layout()
-    # Allow space of suptitle after running tight
-    plt.subplots_adjust(top=0.92)
-    # plt.subplots_adjust(hspace=1.0)
-    return plt
+    return (plt, lgds)
 
 
-def write_group_chart(group_chart, path, plot_title):
+def write_group_chart(group_chart, path, plot_title, lgds):
     suptitle = plt.suptitle(plot_title)
     group_chart.savefig(
-        path, bbox_extra_artists=(suptitle,), bbox_inches="tight"
+        path, bbox_extra_artists=tuple(lgds) + (suptitle,), bbox_inches="tight"
     )
 
 
@@ -257,6 +254,9 @@ def parse_args():
         "--exclude-group",
         help="Exclude group with this label from plot, e.g. Unknown",
     )
+    parser.add_argument(
+        "--columns", type=int, default=2, help="Number of plot columns"
+    )
     return parser.parse_args()
 
 
@@ -271,6 +271,7 @@ def main():
     scale = args.scale
     confidence_intervals = args.confidence_intervals
     exclude_group = args.exclude_group
+    columns = args.columns
 
     measure_table = get_measure_tables(input_file)
 
@@ -278,15 +279,15 @@ def main():
 
     # Parse the names field to determine which subset to use
     subset = subset_table(measure_table, measures_pattern, measures_list)
-    chart = get_group_chart(
+    chart, lgds = get_group_chart(
         subset,
-        columns=2,
+        columns=columns,
         date_lines=date_lines,
         scale=scale,
         ci=confidence_intervals,
         exclude_group=exclude_group,
     )
-    write_group_chart(chart, output_dir / output_name, plot_title)
+    write_group_chart(chart, output_dir / output_name, plot_title, lgds)
     chart.close()
 
 
