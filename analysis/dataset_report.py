@@ -7,6 +7,7 @@ import jinja2
 import numpy
 import pandas
 import dateutil
+import datetime
 from pandas.api import types
 
 
@@ -101,16 +102,43 @@ def is_date_as_obj(series):
         return False
 
 
-def parse_os_date(series):
+def parse_os_year(series):
     """
     OS date formats allow "YYYY" "YYYY-MM" or "YYYY-MM-DD"
     If month or date are included, the value will be a string
     But if only the year is included, it will be a float
     """
     if series.dtype == "float64":
-        return pandas.to_datetime(series, format="%Y")
+        return series.apply(
+            lambda x: datetime.datetime.strptime(str(int(x)), "%Y").year
+            if not numpy.isnan(x)
+            else numpy.nan
+        )
     else:
-        return pandas.to_datetime(series)
+        try:
+            return series.apply(
+                lambda x: datetime.datetime.strptime(x, "%Y-%m-%d").year
+                if not pandas.isnull(x)
+                else numpy.nan
+            )
+        except ValueError:
+            pass
+        try:
+            return series.apply(
+                lambda x: datetime.datetime.strptime(x, "%Y-%m").year
+                if not pandas.isnull(x)
+                else numpy.nan
+            )
+        except ValueError:
+            pass
+        try:
+            return series.apply(
+                lambda x: datetime.datetime.strptime(x, "%Y").year
+                if not pandas.isnull(x)
+                else numpy.nan
+            )
+        except ValueError:
+            return numpy.nan
 
 
 def redact_round_series(series_in):
@@ -189,7 +217,7 @@ def get_column_summaries(dataframe):
         is_date = types.is_datetime64_ns_dtype(series)
         is_csv_date = dataframe.attrs["from_csv"] and "date" in name
         if is_date or is_csv_date:
-            date_series = parse_os_date(series).dt.to_period("Y")
+            date_series = parse_os_year(series)
             redacted = redact_round_series(_groupby(date_series))
             summary = redacted.to_frame(name="Count")
             yield name, summary
