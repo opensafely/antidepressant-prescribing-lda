@@ -108,12 +108,15 @@ def parse_os_year(series):
     If month or date are included, the value will be a string
     But if only the year is included, it will be a float
     """
-    if series.dtype == "float64":
-        return series.apply(
-            lambda x: datetime.datetime.strptime(str(int(x)), "%Y").year
-            if not numpy.isnan(x)
-            else numpy.nan
-        )
+    if series.dtype == "float64" or series.dtype == "int64":
+        try:
+            return series.apply(
+                lambda x: datetime.datetime.strptime(str(int(x)), "%Y").year
+                if not numpy.isnan(x)
+                else numpy.nan
+            )
+        except Exception:
+            return pandas.Series(len(series) * [numpy.nan])
     else:
         try:
             return series.apply(
@@ -121,7 +124,7 @@ def parse_os_year(series):
                 if not pandas.isnull(x)
                 else numpy.nan
             )
-        except ValueError:
+        except Exception:
             pass
         try:
             return series.apply(
@@ -129,7 +132,7 @@ def parse_os_year(series):
                 if not pandas.isnull(x)
                 else numpy.nan
             )
-        except ValueError:
+        except Exception:
             pass
         try:
             return series.apply(
@@ -137,8 +140,8 @@ def parse_os_year(series):
                 if not pandas.isnull(x)
                 else numpy.nan
             )
-        except ValueError:
-            return numpy.nan
+        except Exception:
+            return pandas.Series(len(series) * [numpy.nan])
 
 
 def redact_round_series(series_in):
