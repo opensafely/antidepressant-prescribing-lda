@@ -101,19 +101,24 @@ def is_date_as_obj(series):
         return False
 
 
+def parse_os_date(series):
+    """
+    OS date formats allow "YYYY" "YYYY-MM" or "YYYY-MM-DD"
+    If month or date are included, the value will be a string
+    But if only the year is included, it will be a float
+    """
+    if series.dtype == "float64":
+        return pandas.to_datetime(series, format="%Y")
+    else:
+        return pandas.to_datetime(series)
+
+
 def redact_round_series(series_in):
     """Redacts counts <= 7 and rounds counts to nearest 5"""
-    nan_count = series_in.isna().sum()
-    # Replace all missing with a count of missing
-    series_nan_count = series_in[series_in.notna()].append(
-        pandas.Series([float(nan_count)], index=[numpy.nan])
-    )
     # If we are going to have to redact the next smallest
-    redact_extra = series_nan_count[
-        (series_nan_count > 0) & (series_nan_count <= 7)
-    ].sum()
+    redact_extra = series_in[(series_in > 0) & (series_in <= 7)].sum()
     # Redact <= 7
-    series_out = series_nan_count.apply(
+    series_out = series_in.apply(
         lambda x: numpy.nan if x > 0 and x <= 7 else x
     )
     if redact_extra > 0 and redact_extra <= 7:
@@ -154,6 +159,17 @@ def count_values(series, *, base, threshold):
     return count
 
 
+# NOTE: groupby(dropna=False) not supported on OS version of pandas
+def _groupby(series):
+    s = series.groupby(series).size()
+    count_na = len(series[series.isna()])
+    if count_na > 0:
+        d = s.to_dict()
+        d[numpy.nan] = count_na
+        s = pandas.Series(d)
+    return s
+
+
 def get_column_summaries(dataframe):
     for name, series in dataframe.items():
         if name == "patient_id":
@@ -171,25 +187,45 @@ def get_column_summaries(dataframe):
             yield name, summary
 
         is_date = types.is_datetime64_ns_dtype(series)
-        is_csv_date = (
-            dataframe.attrs["from_csv"]
-            and "date" in name
-            and is_date_as_obj(series)
-        )
+        is_csv_date = dataframe.attrs["from_csv"] and "date" in name
         if is_date or is_csv_date:
-            date_series = pandas.to_datetime(series).dt.to_period("M")
-            redacted = redact_round_series(
-                date_series.groupby(date_series).count()
-            )
+            date_series = parse_os_date(series).dt.to_period("Y")
+            redacted = redact_round_series(_groupby(date_series))
             summary = redacted.to_frame(name="Count")
             yield name, summary
 
 
-def get_dataset_report(input_file, table_summary, column_summaries):
+# NOTE: not a general function, just for curating using yob
+# TODO: switch this to using age
+def count_impossible_dates(dataframe):
+    dataframe = dataframe.set_index("patient_id")
+    earliest = dataframe.filter(regex="earliest")
+    try:
+        years_since_birth = earliest.sub(dataframe["yob"], axis=0)
+    except KeyError:
+        return
+
+    impossible_early = years_since_birth[years_since_birth < 0].count()
+
+    latest = dataframe.filter(regex="latest")
+    impossible_date = latest[latest > 2019].count()
+    impossible = redact_round_series(
+        pandas.concat([impossible_early, impossible_date])
+    )
+    impossible = impossible.reset_index().rename(
+        {"index": "Variable", 0: "Count"}, axis=1
+    )
+    return impossible
+
+
+def get_dataset_report(
+    input_file, table_summary, column_summaries, impossible_summary
+):
     return TEMPLATE.render(
         input_file=input_file,
         table_summary=table_summary,
         column_summaries=column_summaries,
+        impossible_summary=impossible_summary,
     )
 
 
@@ -207,10 +243,11 @@ def main():
         input_dataframe = read_dataframe(input_file)
         table_summary = get_table_summary(input_dataframe)
         column_summaries = get_column_summaries(input_dataframe)
+        impossible_summary = count_impossible_dates(input_dataframe)
 
         output_file = output_dir / f"{get_name(input_file)}.html"
         dataset_report = get_dataset_report(
-            input_file, table_summary, column_summaries
+            input_file, table_summary, column_summaries, impossible_summary
         )
         write_dataset_report(output_file, dataset_report)
 
