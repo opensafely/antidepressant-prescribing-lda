@@ -239,7 +239,7 @@ def count_impossible_dates(dataframe):
     impossible_early = years_since_birth[years_since_birth < 0].count()
 
     latest = dataframe.filter(regex="latest")
-    impossible_date = latest[latest > 2019].count()
+    impossible_date = latest[latest > 2022].count()
     impossible = redact_round_series(
         pandas.concat([impossible_early, impossible_date])
     )
