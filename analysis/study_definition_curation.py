@@ -37,8 +37,9 @@ all_antidepressant_codes = combine_codelists(
 study = StudyDefinition(
     index_date="2019-03-01",
     # Configure the expectations framework
+    # Latest date is in the future to test curation code
     default_expectations={
-        "date": {"earliest": "1900-01-01", "latest": "today"},
+        "date": {"earliest": "1900-01-01", "latest": "2050-01-01"},
         "rate": "uniform",
         "incidence": 0.8,
     },
@@ -48,6 +49,14 @@ study = StudyDefinition(
         """,
     ),
     yob=patients.date_of_birth(date_format="YYYY"),
+    age=patients.age_as_of(
+        "last_day_of_month(index_date) + 1 day",
+        return_expectations={
+            "rate": "universal",
+            "int": {"distribution": "population_ages"},
+            "incidence": 0.001,
+        },
+    ),
     sex=patients.sex(
         return_expectations={
             "rate": "universal",

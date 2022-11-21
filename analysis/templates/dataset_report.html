@@ -27,8 +27,10 @@
         </section>
         {% endfor %}
         <h2>Impossible Dates</h2>
-        <p>Count of patients with dates before their birth year or after the current year</p>
-        {{ impossible_summary }}
+        <p>Count of patients with dates before their birth year</p>
+        {{ impossible_early }}
+        <p>Count of patients with dates after the current date</p>
+        {{ impossible_date }}
     </article>
 </body>
 

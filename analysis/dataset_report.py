@@ -2,6 +2,7 @@ import argparse
 import functools
 import glob
 import pathlib
+import re
 
 import jinja2
 import numpy
@@ -57,11 +58,11 @@ def read_dataframe(path):
         dataframe = pandas.read_stata(path)
     else:
         raise ValueError(f"Cannot read '{ext}' files")
-    # It's useful to know whether a dataframe was read from a csv when summarizing the
-    # columns later.
+    # It's useful to know whether a dataframe was read from a csv when
+    # summarizing the columns later.
     dataframe.attrs["from_csv"] = from_csv
-    # We give the column index a name now, because it's preserved when summaries are
-    # computed later.
+    # We give the column index a name now, because it's preserved when
+    # summaries are computed later.
     dataframe.columns.name = "Column Name"
     return dataframe
 
@@ -83,23 +84,17 @@ def get_table_summary(dataframe):
     )
 
 
-def is_bool_as_int(series):
-    """Does series have bool values but an int dtype?"""
-    # numpy.nan will ensure an int series becomes a float series, so we need to check
-    # for both int and float
-    if not types.is_bool_dtype(series) and types.is_numeric_dtype(series):
-        series = series.dropna()
-        return ((series == 0) | (series == 1)).all()
-    else:
-        return False
-
-
 def is_date_as_obj(series):
     try:
         pandas.to_datetime(series)
         return True
     except dateutil.parser._parser.ParserError:
         return False
+
+
+def is_category(series):
+    """Series with 10 or fewer levels"""
+    return len(series.unique()) <= 10
 
 
 def parse_os_year(series):
@@ -147,47 +142,18 @@ def parse_os_year(series):
 def redact_round_series(series_in):
     """Redacts counts <= 7 and rounds counts to nearest 5"""
     # If we are going to have to redact the next smallest
-    redact_extra = series_in[(series_in > 0) & (series_in <= 7)].sum()
+    redact_extra = series_in[(series_in >= 0) & (series_in <= 7)].sum()
     # Redact <= 7
     series_out = series_in.apply(
-        lambda x: numpy.nan if x > 0 and x <= 7 else x
+        lambda x: "[REDACTED]" if x > 0 and x <= 7 else x
     )
     if redact_extra > 0 and redact_extra <= 7:
-        series_out[series_out == series_out.min()] = numpy.nan
+        next_min = series_out[series_out != "[REDACTED]"].min()
+        series_out[series_out == next_min] = "[REDACTED]"
     rounded = series_out.apply(
-        lambda x: 5 * round(x / 5) if not numpy.isnan(x) else x
+        lambda x: 5 * round(x / 5) if (x != "[REDACTED]") else x
     )
     return rounded
-
-
-def round_to_nearest(series, base):
-    """Rounds values in series to the nearest base."""
-    # ndigits=0 ensures the return value is a whole number, but with the same type as x
-    series_copy = series.apply(lambda x: base * round(x / base, ndigits=0))
-    try:
-        return series_copy.astype(int)
-    except ValueError:
-        # series contained nan
-        return series_copy
-
-
-def suppress(series, threshold):
-    """Replaces values in series less than or equal to threshold with missing values."""
-    series_copy = series.copy()
-    series_copy[series_copy <= threshold] = numpy.nan  # in place
-    return series_copy
-
-
-def count_values(series, *, base, threshold):
-    """Counts values, including missing values, in series.
-
-    Rounds counts to the nearest base; then suppresses counts less than or equal to
-    threshold.
-    """
-    count = series.value_counts(dropna=False)
-    count = count.pipe(round_to_nearest, base).pipe(suppress, threshold)
-    count = count.sort_index(na_position="first")
-    return count
 
 
 # NOTE: groupby(dropna=False) not supported on OS version of pandas
@@ -206,57 +172,73 @@ def get_column_summaries(dataframe):
         if name == "patient_id":
             continue
 
-        is_csv_bool = dataframe.attrs["from_csv"] and is_bool_as_int(series)
-        is_bool = types.is_bool_dtype(series)
-        if is_csv_bool or is_bool:
-            count = count_values(series, threshold=5, base=5)
-            percentage = count / count.sum() * 100
+        is_date = types.is_datetime64_ns_dtype(series)
+        is_csv_date = dataframe.attrs["from_csv"] and "date" in name
+        if is_date or is_csv_date:
+            if is_csv_date:
+                date_series = parse_os_year(series)
+            else:
+                date_series = series.dt.year
+            redacted = redact_round_series(_groupby(date_series))
+            summary = redacted.to_frame(name="Count")
+            yield name, summary
+        is_cat = is_category(series)
+        if is_cat:
+            count = series.value_counts(dropna=False)
+            redacted = redact_round_series(count)
+            total = redacted[redacted != "[REDACTED]"].sum()
+            percentage = redacted.apply(
+                lambda x: 100 * x / total
+                if x != "[REDACTED]"
+                else "[REDACTED]"
+            )
             summary = pandas.DataFrame(
-                {"Count": count, "Percentage": percentage}
+                {"Count": redacted, "Percentage": percentage}
             )
             summary.index.name = "Column Value"
             yield name, summary
 
-        is_date = types.is_datetime64_ns_dtype(series)
-        is_csv_date = dataframe.attrs["from_csv"] and "date" in name
-        if is_date or is_csv_date:
-            date_series = parse_os_year(series)
-            redacted = redact_round_series(_groupby(date_series))
-            summary = redacted.to_frame(name="Count")
-            yield name, summary
 
-
-# NOTE: not a general function, just for curating using yob
-# TODO: switch this to using age
-def count_impossible_dates(dataframe):
+# NOTE: dependent on having an age variable
+def count_impossible_dates(dataframe, current_year):
     dataframe = dataframe.set_index("patient_id")
-    earliest = dataframe.filter(regex="earliest")
     try:
-        years_since_birth = earliest.sub(dataframe["yob"], axis=0)
+        age = dataframe["age"]
     except KeyError:
         return
+    dates = dataframe.filter(regex="date")
 
-    impossible_early = years_since_birth[years_since_birth < 0].count()
+    if dataframe.attrs["from_csv"]:
+        dates = dates.apply(lambda x: parse_os_year(x))
+    else:
+        dates = dates.apply(lambda x: x.dt.year, axis=1)
 
-    latest = dataframe.filter(regex="latest")
-    impossible_date = latest[latest > 2022].count()
-    impossible = redact_round_series(
-        pandas.concat([impossible_early, impossible_date])
+    age_added = dates.add(age, axis=0)
+
+    impossible_early = pandas.DataFrame(
+        redact_round_series(age_added[age_added < current_year].count())
     )
-    impossible = impossible.reset_index().rename(
-        {"index": "Variable", 0: "Count"}, axis=1
+    impossible_date = pandas.DataFrame(
+        redact_round_series(dates[dates > current_year].count())
     )
-    return impossible
+    impossible_early = impossible_early.rename({0: "Count"}, axis=1)
+    impossible_date = impossible_date.rename({0: "Count"}, axis=1)
+    return (impossible_early, impossible_date)
 
 
 def get_dataset_report(
-    input_file, table_summary, column_summaries, impossible_summary
+    input_file,
+    table_summary,
+    column_summaries,
+    impossible_early,
+    impossible_date,
 ):
     return TEMPLATE.render(
         input_file=input_file,
         table_summary=table_summary,
         column_summaries=column_summaries,
-        impossible_summary=impossible_summary,
+        impossible_early=impossible_early,
+        impossible_date=impossible_date,
     )
 
 
@@ -271,14 +253,27 @@ def main():
     output_dir = args.output_dir
 
     for input_file in input_files:
+        match_str = re.search(r"\d{4}-\d{2}-\d{2}", input_file.name)
+        if match_str:
+            year = datetime.datetime.strptime(
+                match_str.group(), "%Y-%m-%d"
+            ).year
+        else:
+            year = datetime.datetime.today().year
         input_dataframe = read_dataframe(input_file)
         table_summary = get_table_summary(input_dataframe)
         column_summaries = get_column_summaries(input_dataframe)
-        impossible_summary = count_impossible_dates(input_dataframe)
+        impossible_early, impossible_date = count_impossible_dates(
+            input_dataframe, year
+        )
 
         output_file = output_dir / f"{get_name(input_file)}.html"
         dataset_report = get_dataset_report(
-            input_file, table_summary, column_summaries, impossible_summary
+            input_file,
+            table_summary,
+            column_summaries,
+            impossible_early,
+            impossible_date,
         )
         write_dataset_report(output_file, dataset_report)
 
