@@ -117,6 +117,28 @@ def plot_cis(ax, data):
     )
 
 
+def is_bool_as_int(series):
+    """Does series have bool values but an int dtype?"""
+    # numpy.nan will ensure an int series becomes a float series, so we need to
+    # check for both int and float
+    if not pandas.api.types.is_bool_dtype(
+        series
+    ) and pandas.api.types.is_numeric_dtype(series):
+        series = series.dropna()
+        return ((series == 0) | (series == 1)).all()
+    elif not pandas.api.types.is_bool_dtype(
+        series
+    ) and pandas.api.types.is_object_dtype(series):
+        try:
+            series = series.astype(int)
+        except ValueError:
+            return False
+        series = series.dropna()
+        return ((series == 0) | (series == 1)).all()
+    else:
+        return False
+
+
 def get_group_chart(
     measure_table,
     columns=2,
@@ -141,17 +163,23 @@ def get_group_chart(
     if total_plots % columns > 0:
         rows = rows + 1
 
-    for index, panel_group in enumerate(groups):
+    for index, panel in enumerate(groups):
+        panel_group, panel_group_data = panel
+        is_bool = is_bool_as_int(panel_group_data.group)
+        if is_bool:
+            panel_group_data.group = panel_group_data.group.astype(int).astype(
+                bool
+            )
         ax = figure.add_subplot(rows, columns, index + 1)
         ax.autoscale(enable=True, axis="y")
         title = translate_group(
-            panel_group[1].category[0],
-            panel_group[0],
+            panel_group_data.category[0],
+            panel_group,
             repeated,
             autolabel=True,
         )
         ax.set_title(title)
-        filtered = panel_group[1][panel_group[1].group != exclude_group]
+        filtered = panel_group_data[panel_group_data.group != exclude_group]
         numeric = coerce_numeric(filtered)
         for plot_group, plot_group_data in numeric.groupby("group"):
             ax.plot(
