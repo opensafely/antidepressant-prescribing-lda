@@ -2,7 +2,7 @@
 start_date = "2019-01-01"
 
 # study end date.  should match date in project.yaml
-end_date = "2022-07-01"
+end_date = "2022-11-01"
 
 # depression register start date
 depr_register_date = "2006-04-01"
