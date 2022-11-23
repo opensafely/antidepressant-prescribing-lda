@@ -20,8 +20,7 @@ from codelists import (
     anxiety_codes,
     ssri_codes,
     tricyclic_codes,
-    maoi_codes,
-    other_antidepressant_codes,
+    maoi_or_other_codes,
     depression_codes,
 )
 from config import (
@@ -39,8 +38,7 @@ from depression_variables import (
 antidepressant_types = {
     "antidepressant_ssri": ssri_codes,
     "antidepressant_tricyclic": tricyclic_codes,
-    "antidepressant_maoi": maoi_codes,
-    "antidepressant_other_cod": other_antidepressant_codes,
+    "antidepressant_other": maoi_or_other_codes,
 }
 antidepressant_groups = [
     "antidepressant_ssri",
@@ -172,18 +170,6 @@ study = StudyDefinition(
         return_expectations={"incidence": 0.1},
     ),
     **create_antidepressant_vars(),
-    antidepressant_other=patients.satisfying(
-        """
-        antidepressant_maoi OR
-        antidepressant_other_cod
-        """
-    ),
-    antidepressant_other_new=patients.satisfying(
-        """
-        antidepressant_maoi_new OR
-        antidepressant_other_cod_new
-        """,
-    ),
     antidepressant_any=patients.satisfying(
         """
         antidepressant_ssri OR

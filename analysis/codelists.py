@@ -11,7 +11,7 @@
 # --- IMPORT STATEMENTS ---
 
 # Import code building blocks from cohort extractor package
-from cohortextractor import codelist_from_csv
+from cohortextractor import codelist_from_csv, combine_codelists
 
 
 # --- CODELISTS ---
@@ -39,6 +39,10 @@ other_antidepressant_codes = codelist_from_csv(
     "local_codelists/opensafely-other-antidepressants-dmd_new.csv",
     system="snomed",
     column="dmd_id",
+)
+maoi_or_other_codes = combine_codelists(
+    maoi_codes,
+    other_antidepressant_codes,
 )
 
 # Groups
