@@ -2,9 +2,11 @@ import argparse
 import pathlib
 import fnmatch
 import pandas
+import numpy
 
 import matplotlib.pyplot as plt
 import dataframe_image as dfi
+from collections import Counter
 
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -15,22 +17,39 @@ import scipy as sp
 plt.style.use("seaborn-whitegrid")
 
 
-def get_table(measure_table, groupby=["name"]):
+def autoselect_labels(measures_list):
+    measures_set = set(measures_list)
+    counts = Counter(
+        numpy.concatenate([item.split("_") for item in measures_set])
+    )
+    remove = [k for k, v in counts.items() if v == len(measures_set)]
+    return remove
+
+
+def translate_group(label, repeated):
+    return " ".join([x for x in label.split("_") if x not in repeated]).title()
+
+
+def get_table(measure_table, group_by):
     """
     Group the table by some number of user-provided parameters and generate
     a regression model for each one
     """
     rows = {}
-    for subgroup, subgroup_data in measure_table.groupby(groupby):
-        df, step_time, step2_time, end = get_its_variables(
-            subgroup_data, "2020-03-01", "2021-04-01"
-        )
-        poisson = get_poisson(df)
-        row = get_coef(poisson, subgroup)
-        if type(subgroup) == tuple:
-            rows[subgroup] = row
+    for subgroup, subgroup_data in measure_table.groupby(measure_table.name.str.contains("new")):
+        repeated = autoselect_labels(subgroup_data.name.unique())
+        if subgroup:
+            key = f"New {repeated[0]}".title()
         else:
-            rows[(subgroup,)] = row
+            key = f"All {repeated[0]}".title()
+        for subsubgroup, subsubgroup_data in subgroup_data.groupby(group_by):
+            label = translate_group(subsubgroup, repeated)
+            df, step_time, step2_time, end = get_its_variables(
+                subsubgroup_data, "2020-03-01", "2021-04-01"
+            )
+            poisson = get_poisson(df)
+            row = get_coef(poisson, subgroup)
+            rows[(key, label)] = row
     index = pandas.MultiIndex.from_tuples(rows.keys())
     table = pandas.concat(rows.values(), keys=index)
     table.index = index
@@ -93,9 +112,6 @@ def get_poisson(df):
     res = model.fit(cov_type="HAC", cov_kwds={"maxlags": 4}, maxiter=200)
     print(res.summary())
     # check_residuals(res.resid_pearson)
-    import code
-
-    code.interact(local=locals())
     return res
 
 
@@ -253,8 +269,6 @@ def get_its_variables(dataframe, cutdate1, cutdate2):
     )
     df["index"] = df["time"]
     df = df.set_index("index")
-    df.numerator = df.numerator.astype(int)
-    df.denominator = df.denominator.astype(int)
     return (df, cutmonth1, cutmonth2, end)
 
 
@@ -274,6 +288,9 @@ def coerce_numeric(table):
     Leave NaN values in df so missing data are not inferred
     """
     coerced = table.copy()
+    coerced["numerator"] = pandas.to_numeric(
+        coerced["numerator"], errors="coerce"
+    )
     coerced["denominator"] = pandas.to_numeric(
         coerced["denominator"], errors="coerce"
     )
@@ -346,8 +363,9 @@ def main():
     df, step_time, step2_time, end = get_its_variables(
         numeric, "2020-03-01", "2021-04-01"
     )
-    table = get_table(df, groupby=["name", df.name.str.contains("new")])
-    dfi.export(table, output_dir + "its_table.png")
+    table = get_table(df, "group")
+    #dfi.export(table, output_dir / "its_table.png")
+    dfi.export(table, "its_table.png")
 
 
 if __name__ == "__main__":
