@@ -179,6 +179,9 @@ def main():
         sub = sub.set_index(["Category", "Group"])
         sub = sub[["Numerator", "Denominator"]]
         sub = sub.apply(pandas.to_numeric, errors="coerce")
+        overall = sub.loc[sub.iloc[0].name[0]].sum()
+        overall.name = ("Total", "")
+        sub = pandas.concat([pandas.DataFrame(overall).T, sub])
         sub = get_percentages(sub)
         sub.columns = pandas.MultiIndex.from_product(
             [[f"{column.title()}"], sub.columns]
