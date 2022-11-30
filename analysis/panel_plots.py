@@ -32,6 +32,25 @@ def subset_table(measure_table, measures_pattern, measures_list):
     return measure_table[measure_table["name"].isin(measures_list)]
 
 
+# NOTE: This will not work if the variable to flatten was last in the groupby
+def flatten(df):
+    """
+    If a category has only one value and the group has boolean values, then
+    filter for rows where that value is true
+    Create new columns group and category with the last seen group/category
+    """
+    df = df.dropna(axis=1, how="all")
+    df = df.apply(
+        lambda x: series_to_bool(x) if "group" in x.name else x
+    )
+    for category in df.filter(regex="category"):
+        group = f"group_{category.split('_')[-1]}"
+        if len(df[category].unique()) == 1 and df[group].dtype == "bool":
+            df = df[df[group]]
+    df["group"] = df[group]
+    df["category"] = df[category]
+    return df
+
 def coerce_numeric(table):
     """
     The denominator and value columns should contain only numeric values
@@ -139,6 +158,13 @@ def is_bool_as_int(series):
         return False
 
 
+def series_to_bool(series):
+    if is_bool_as_int(series):
+        return series.astype(int).astype(bool)
+    else:
+        return series
+
+
 def get_group_chart(
     measure_table,
     columns=2,
@@ -165,11 +191,7 @@ def get_group_chart(
 
     for index, panel in enumerate(groups):
         panel_group, panel_group_data = panel
-        is_bool = is_bool_as_int(panel_group_data.group)
-        if is_bool:
-            panel_group_data.group = panel_group_data.group.astype(int).astype(
-                bool
-            )
+        panel_group_data.group = series_to_bool(panel_group_data.group)
         ax = figure.add_subplot(rows, columns, index + 1)
         ax.autoscale(enable=True, axis="y")
         title = translate_group(
@@ -180,8 +202,7 @@ def get_group_chart(
         )
         ax.set_title(title)
         filtered = panel_group_data[panel_group_data.group != exclude_group]
-        numeric = coerce_numeric(filtered)
-        for plot_group, plot_group_data in numeric.groupby("group"):
+        for plot_group, plot_group_data in filtered.groupby("group"):
             ax.plot(
                 plot_group_data.index, plot_group_data.value, label=plot_group
             )
@@ -306,8 +327,10 @@ def main():
 
     # Parse the names field to determine which subset to use
     subset = subset_table(measure_table, measures_pattern, measures_list)
+    numeric = coerce_numeric(subset)
+    flattened = flatten(numeric)
     chart = get_group_chart(
-        subset,
+        flattened,
         columns=2,
         date_lines=date_lines,
         scale=scale,
