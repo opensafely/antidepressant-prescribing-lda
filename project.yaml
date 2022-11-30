@@ -35,20 +35,6 @@ actions:
       highly_sensitive:
         cohort: output/input_ethnicity.csv.gz
 
-  # Generate depression register by month
-  generate_study_population_register:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_register --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof
-    outputs:
-      highly_sensitive:
-        cohort: output/qof/input_register_*.csv.gz
-
-  # Generate dep003 by month
-  generate_study_population_dep003:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_dep003 --index-date-range "2020-01-01 to 2020-04-01 by month" --output-format=csv.gz --output-dir output/qof
-    outputs:
-      highly_sensitive:
-        cohort: output/qof/input_dep003_*.csv.gz
-
   # Generate prescription variables by month
   generate_study_population_lda_2019:
     run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2019-01-01 to 2019-12-01 by month" --output-format=csv.gz --output-dir output/lda/codelist_update
@@ -74,18 +60,6 @@ actions:
       highly_sensitive:
         cohort: output/lda/codelist_update/input_lda_2022*.csv.gz
 
-
-  # Generate dataset report
-  generate_dataset_report:
-    run: >
-      python:latest python analysis/dataset_report.py
-        --input-files output/qof/input_*.csv.gz
-        --output-dir output/qof/
-    needs: [generate_study_population_register, generate_study_population_dep003]
-    outputs:
-      moderately_sensitive:
-        dataset_report: output/qof/input_*.html
-
   # Generate dataset report lda
   generate_dataset_report_lda:
     run: >
@@ -102,18 +76,6 @@ actions:
   # Efficiency fix https://github.com/opensafely/research-template
   # BUT BEWARE STALE DATA
   ###################
-
-  join_cohorts_qof:
-    run: >
-      cohort-joiner:v0.0.18
-        --lhs output/qof/input_*.csv.gz
-        --rhs output/input_ethnicity.csv.gz
-        --output-dir output/qof/joined
-    needs: [generate_study_population_ethnicity, generate_study_population_register, generate_study_population_dep003]
-    outputs:
-      highly_sensitive:
-        cohort: output/qof/joined/input_*.csv.gz
-
   join_cohorts_lda:
     run: >
       cohort-joiner:v0.0.18
@@ -126,57 +88,8 @@ actions:
         cohort: output/lda/codelist_update/joined/input_*.csv.gz
 
   ####################
-  # Python testing
-  ####################
-  test_input:
-    run: >
-            python:latest python analysis/test_input.py
-            --input-files output/qof/joined/input_*.csv.gz
-            --output-dir output/qof/joined/python
-    needs: [join_cohorts_qof]
-    outputs:
-      moderately_sensitive:
-        cohort: output/qof/joined/python/test_*.*
-
-  ####################
   # Measures
   ####################
-
-  # Output the summary values by date
-  generate_measures_register:
-      run: cohortextractor:latest generate_measures --study-definition study_definition_register --output-dir=output/qof/joined
-      needs: [join_cohorts_qof]
-      outputs:
-        moderately_sensitive:
-          # Only output the single summary file
-          measure_csv: output/qof/joined/measure_register_*_rate.csv
-
-  join_measures_register:
-      run: python:latest python analysis/join_and_round.py
-           --input-list output/qof/joined/measure_register_total_rate.csv
-           --input-list output/qof/joined/measure_register_age_band_rate.csv
-           --input-list output/qof/joined/measure_register_carehome_rate.csv
-           --input-list output/qof/joined/measure_register_ethnicity_rate.csv
-           --input-list output/qof/joined/measure_register_imd_rate.csv
-           --input-list output/qof/joined/measure_register_learning_disability_rate.csv
-           --input-list output/qof/joined/measure_register_region_rate.csv
-           --input-list output/qof/joined/measure_register_sex_rate.csv
-           --output-dir output/qof/joined/summary
-           --output-name "measure_register.csv"
-      needs: [generate_measures_register]
-      outputs:
-        moderately_sensitive:
-          # Only output the single summary file
-          measure_csv: output/qof/joined/summary/measure_register.csv
-
-  generate_measures_dep003:
-      run: cohortextractor:latest generate_measures --study-definition study_definition_dep003 --output-dir=output/qof/joined
-      needs: [join_cohorts_qof]
-      outputs:
-        moderately_sensitive:
-          # Only output the single summary file
-          measure_csv: output/qof/joined/measure_dep003_*_rate.csv
-
   generate_measures_lda:
       run: cohortextractor:latest generate_measures --study-definition study_definition_lda --output-dir=output/lda/codelist_update/joined/
       needs: [join_cohorts_lda]
@@ -199,34 +112,6 @@ actions:
   #############################
   # Plotting
   #############################
-  generate_qof_deciles_charts:
-    run: >
-            deciles-charts:v0.0.15
-            --input-files output/qof/joined/measure_*_practice_rate.csv
-            --output-dir output/qof/joined
-    config:
-      show_outer_percentiles: false
-      tables:
-        output: true
-      charts:
-        output: true
-    needs: [generate_measures_register, generate_measures_dep003]
-    outputs:
-      moderately_sensitive:
-        cohort: output/qof/joined/deciles_*_*.*
-
-  generate_qof_groups:
-    run: >
-            python:latest python analysis/group_charts.py
-            --input-files output/qof/joined/measure_*.csv
-            --output-dir output/qof/joined
-            --date-lines "2019-03-31" "2020-03-31" "2021-03-31"
-            --scale "percentage"
-    needs: [generate_measures_register, generate_measures_dep003]
-    outputs:
-      moderately_sensitive:
-        cohort: output/qof/joined/group_chart_*.png
-
   generate_lda_all_prescribing:
     run: >
             python:latest python analysis/panel_plots.py
@@ -328,17 +213,3 @@ actions:
     outputs:
       moderately_sensitive:
         cohort: output/lda/codelist_update/joined/summary/table1.html
-
-  #############################
-  # Display
-  #############################
-  generate_report:
-    run: >
-            python:latest python analysis/report.py
-            --input-dir output/qof/joined
-            --output-dir output/qof/joined
-            --resource-dir analysis/resources
-    needs: [generate_qof_deciles_charts, generate_qof_groups]
-    outputs:
-      moderately_sensitive:
-        cohort: output/qof/joined/report.html
