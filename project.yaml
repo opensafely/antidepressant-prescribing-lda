@@ -161,7 +161,7 @@ actions:
     run: >
             python:latest python analysis/panel_plots.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
-            --measures-pattern "antidepressant_*_all_breakdown_*_rate"
+            --measures-pattern "antidepressant_any_all_breakdown_*_rate"
             --output-dir output/lda/codelist_update/joined/summary
             --output-name "any_antidepressant_by_demographic_group"
             --date-lines "2020-03-16" "2020-12-02"
@@ -176,7 +176,7 @@ actions:
     run: >
             python:latest python analysis/panel_plots.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
-            --measures-pattern "antidepressant_*_learning_disability_breakdown_*_rate"
+            --measures-pattern "antidepressant_any_learning_disability_breakdown_*_rate"
             --output-dir output/lda/codelist_update/joined/summary
             --output-name "learning_disability_any_antidepressant_by_demographic_group"
             --date-lines "2020-03-16" "2020-12-02"
@@ -191,7 +191,7 @@ actions:
     run: >
             python:latest python analysis/panel_plots.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
-            --measures-pattern "antidepressant_*_autism_breakdown_*_rate"
+            --measures-pattern "antidepressant_any_autism_breakdown_*_rate"
             --output-dir output/lda/codelist_update/joined/summary
             --output-name "autism_any_antidepressant_by_demographic_group"
             --date-lines "2020-03-16" "2020-12-02"
@@ -207,9 +207,43 @@ actions:
             python:latest python analysis/table1.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
             --output-dir output/lda/codelist_update/joined/summary
-            --measures-pattern "antidepressant_any_*_breakdown_*_rate"
+            --measures-list "antidepressant_any_all_breakdown_age_band_rate"
+            --measures-list "antidepressant_any_all_breakdown_sex_band_rate"
+            --measures-list "antidepressant_any_all_breakdown_carehome_rate"
+            --measures-list "antidepressant_any_all_breakdown_ethnicity_rate"
+            --measures-list "antidepressant_any_all_breakdown_imd_rate"
+            --measures-list "antidepressant_any_all_breakdown_region_rate"
+            --measures-list "antidepressant_any_all_breakdown_diagnosis_rate"
+            --measures-list "antidepressant_any_autism_breakdown_age_band_rate"
+            --measures-list "antidepressant_any_autism_breakdown_sex_rate"
+            --measures-list "antidepressant_any_autism_breakdown_carehome_rate"
+            --measures-list "antidepressant_any_autism_breakdown_ethnicity_rate"
+            --measures-list "antidepressant_any_autism_breakdown_imd_rate"
+            --measures-list "antidepressant_any_autism_breakdown_region_rate"
+            --measures-list "antidepressant_any_autism_breakdown_diagnosis_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_age_band_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_sex_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_carehome_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_ethnicity_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_imd_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_region_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_diagnosis_rate"
             --column-names "all" "learning_disability" "autism"
+            --output-name "table1.html"
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
         cohort: output/lda/codelist_update/joined/summary/table1.html
+
+  generate_table1_new:
+    run: >
+            python:latest python analysis/table1.py
+            --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
+            --output-dir output/lda/codelist_update/joined/summary
+            --measures-pattern "antidepressant_any_new_*_breakdown_*_rate"
+            --column-names "all" "learning_disability" "autism"
+            --output-name "table1_new.html"
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/codelist_update/joined/summary/table1_new.html

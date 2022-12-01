@@ -73,9 +73,7 @@ def flatten(df):
     Create new columns group and category with the last seen group/category
     """
     df = df.dropna(axis=1, how="all")
-    df = df.apply(
-        lambda x: series_to_bool(x) if "group" in x.name else x
-    )
+    df = df.apply(lambda x: series_to_bool(x) if "group" in x.name else x)
     for category in df.filter(regex="category"):
         group = f"{category.replace('category', 'group')}"
         if len(df[category].unique()) == 1 and df[group].dtype == "bool":
@@ -83,7 +81,6 @@ def flatten(df):
     df["group"] = df[group]
     df["category"] = df[category]
     return df
-
 
 
 def transform_percentage(x):
@@ -142,7 +139,8 @@ def parse_args():
     measures_group.add_argument(
         "--measures-list",
         required=False,
-        help="A list of one or more measure names for rows",
+        action="append",
+        help="Manually provide a list of one or more measure names for rows",
     )
     parser.add_argument(
         "--column-names",
@@ -155,6 +153,11 @@ def parse_args():
         type=pathlib.Path,
         help="Path to the output directory",
     )
+    parser.add_argument(
+        "--output-name",
+        required=True,
+        help="Name for panel plot",
+    )
     return parser.parse_args()
 
 
@@ -164,6 +167,7 @@ def main():
     measures_pattern = args.measures_pattern
     measures_list = args.measures_list
     output_dir = args.output_dir
+    output_name = args.output_name
     columns = args.column_names
 
     measure_table = get_measure_tables(input_file)
@@ -191,7 +195,7 @@ def main():
         else:
             table1 = table1.join(sub)
 
-    table1.to_html(output_dir / "table1.html", index=True)
+    table1.to_html(output_dir / output_name, index=True)
 
 
 if __name__ == "__main__":

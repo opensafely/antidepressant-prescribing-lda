@@ -40,9 +40,7 @@ def flatten(df):
     Create new columns group and category with the last seen group/category
     """
     df = df.dropna(axis=1, how="all")
-    df = df.apply(
-        lambda x: series_to_bool(x) if "group" in x.name else x
-    )
+    df = df.apply(lambda x: series_to_bool(x) if "group" in x.name else x)
     for category in df.filter(regex="category"):
         group = f"group_{category.split('_')[-1]}"
         if len(df[category].unique()) == 1 and df[group].dtype == "bool":
@@ -50,6 +48,7 @@ def flatten(df):
     df["group"] = df[group]
     df["category"] = df[category]
     return df
+
 
 def coerce_numeric(table):
     """
@@ -274,7 +273,8 @@ def parse_args():
     measures_group.add_argument(
         "--measures-list",
         required=False,
-        help="A list of one or more measure names",
+        action="append",
+        help="Manually provide a list of one or more measure names",
     )
     parser.add_argument(
         "--output-dir",
