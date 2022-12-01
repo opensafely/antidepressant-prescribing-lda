@@ -21,7 +21,6 @@ from codelists import (
     ssri_codes,
     tricyclic_codes,
     maoi_or_other_codes,
-    depression_codes,
 )
 from config import (
     start_date,
@@ -66,8 +65,8 @@ def create_antidepressant_vars():
                 returning="binary_flag",
                 find_last_match_in_period=True,
                 between=[
-                    f"first_day_of_month(index_date) - 2 years",
-                    f"first_day_of_month(index_date) - 1 day",
+                    "first_day_of_month(index_date) - 2 years",
+                    "first_day_of_month(index_date) - 1 day",
                 ],
             ),
             f"{name}_naive": patients.satisfying(
@@ -113,30 +112,6 @@ study = StudyDefinition(
     **demographic_variables,
     # QOF DEP003
     **depression_register_variables,
-    # New depression
-    depression_naive=patients.satisfying(
-        """
-        depression_list_type AND
-        NOT depression_2y
-        """,
-        depression_2y=patients.with_these_clinical_events(
-            codelist=depression_codes,
-            returning="binary_flag",
-            find_last_match_in_period=True,
-            between=[
-                "first_day_of_month(index_date) - 2 years",
-                "last_day_of_month(index_date) - 1 day",
-            ],
-            return_expectations={"incidence": 0.01},
-        ),
-    ),
-    depression_new=patients.satisfying(
-        """
-        depression_register AND
-        depression_naive
-        """,
-        return_expectations={"incidence": 0.1},
-    ),
     **create_antidepressant_vars(),
     antidepressant_any=patients.satisfying(
         """
@@ -151,7 +126,6 @@ study = StudyDefinition(
         antidepressant_tricyclic_naive AND
         antidepressant_other_naive
         """,
-
     ),
     antidepressant_any_new=patients.satisfying(
         """
@@ -167,6 +141,18 @@ study = StudyDefinition(
     antidepressant_any_18=patients.satisfying(
         """
         antidepressant_any AND
+        depression_list_type
+        """,
+    ),
+    antidepressant_any_new_18=patients.satisfying(
+        """
+        antidepressant_any_new AND
+        depression_list_type
+        """,
+    ),
+    antidepressant_any_naive_18=patients.satisfying(
+        """
+        antidepressant_any_naive AND
         depression_list_type
         """,
     ),
@@ -211,16 +197,16 @@ measures = [
         small_number_suppression=True,
     ),
     Measure(
-        id="depression_all_total_rate",
-        numerator="depression_register",
-        denominator="depression_list_type",
-        group_by="population",
+        id="antidepressant_any_new_all_breakdown_diagnosis_18+_rate",
+        numerator="antidepressant_any_new_18",
+        denominator="antidepressant_any_naive_18",
+        group_by=["diagnosis"],
         small_number_suppression=True,
     ),
     Measure(
-        id="depression_new_all_total_rate",
-        numerator="depression_new",
-        denominator="depression_naive",
+        id="depression_all_total_rate",
+        numerator="depression_register",
+        denominator="depression_list_type",
         group_by="population",
         small_number_suppression=True,
     ),
@@ -228,24 +214,24 @@ measures = [
 for group in lda_subgroups:
     m = Measure(
         id=f"antidepressant_any_{group}_breakdown_diagnosis_18+_rate",
-        numerator=f"antidepressant_any_18",
-        denominator=f"depression_list_type",
+        numerator="antidepressant_any_18",
+        denominator="depression_list_type",
+        group_by=[group, "diagnosis"],
+        small_number_suppression=True,
+    )
+    measures.append(m)
+    m = Measure(
+        id=f"antidepressant_any_new_{group}_breakdown_diagnosis_18+_rate",
+        numerator="antidepressant_any_new_18",
+        denominator="antidepressant_any_naive_18",
         group_by=[group, "diagnosis"],
         small_number_suppression=True,
     )
     measures.append(m)
     m = Measure(
         id=f"depression_{group}_total_rate",
-        numerator=f"depression_register",
-        denominator=f"depression_list_type",
-        group_by=[group],
-        small_number_suppression=True,
-    )
-    measures.append(m)
-    m = Measure(
-        id=f"depression_new_{group}_total_rate",
-        numerator=f"depression_new",
-        denominator=f"depression_naive",
+        numerator="depression_register",
+        denominator="depression_list_type",
         group_by=[group],
         small_number_suppression=True,
     )
@@ -300,11 +286,27 @@ for d in breakdown_list:
         small_number_suppression=True,
     )
     measures.append(m)
+    m = Measure(
+        id=f"antidepressant_any_new_all_breakdown_{d}_rate",
+        numerator="antidepressant_any_new",
+        denominator="antidepressant_any_naive",
+        group_by=[d],
+        small_number_suppression=True,
+    )
+    measures.append(m)
     for group in lda_subgroups:
         m = Measure(
             id=f"antidepressant_any_{group}_breakdown_{d}_rate",
-            numerator=f"antidepressant_any",
+            numerator="antidepressant_any",
             denominator="population",
+            group_by=[group, d],
+            small_number_suppression=True,
+        )
+        measures.append(m)
+        m = Measure(
+            id=f"antidepressant_any_new_{group}_breakdown_{d}_rate",
+            numerator="antidepressant_any_new",
+            denominator="antidepressant_any_naive",
             group_by=[group, d],
             small_number_suppression=True,
         )
