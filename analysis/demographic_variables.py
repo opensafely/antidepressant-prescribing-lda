@@ -115,76 +115,25 @@ demographic_variables = dict(
         },
     ),
     # Learning disability
-    ld=patients.with_these_clinical_events(
+    learning_disability=patients.with_these_clinical_events(
         learning_disability_codes,
         on_or_before="last_day_of_month(index_date)",
         returning="binary_flag",
         return_expectations={"incidence": 0.2},
     ),
-    learning_disability=patients.categorised_as(
-        {
-            "Unknown": "DEFAULT",
-            "No record of learning disability": "ld='0'",
-            "Record of learning disability": "ld='1'",
-        },
-        return_expectations={
-            "rate": "universal",
-            "category": {
-                "ratios": {
-                    "No record of learning disability": 0.8,
-                    "Record of learning disability": 0.1,
-                    "Unknown": 0.1,
-                }
-            },
-        },
-    ),
     # Autism
-    aut=patients.with_these_clinical_events(
+    autism=patients.with_these_clinical_events(
         autism_codes,
         on_or_before="last_day_of_month(index_date)",
         returning="binary_flag",
         return_expectations={"incidence": 0.3},
     ),
-    autism=patients.categorised_as(
-        {
-            "Unknown": "DEFAULT",
-            "No record of autism": "aut='0'",
-            "Record of autism": "aut='1'",
-        },
-        return_expectations={
-            "rate": "universal",
-            "category": {
-                "ratios": {
-                    "No record of autism": 0.7,
-                    "Record of autism": 0.2,
-                    "Unknown": 0.1,
-                }
-            },
-        },
-    ),
     # Care home
-    carehome=patients.categorised_as(
-        {
-            "Unknown": "DEFAULT",
-            "Not in carehome": "ch='0'",
-            "Carehome": "ch='1'",
-        },
-        ch=patients.with_these_clinical_events(
-            carehome_codes,
-            on_or_before="last_day_of_month(index_date)",
-            returning="binary_flag",
-            return_expectations={"incidence": 0.2},
-        ),
-        return_expectations={
-            "rate": "universal",
-            "category": {
-                "ratios": {
-                    "Unknown": 0.1,
-                    "Not in carehome": 0.8,
-                    "Carehome": 0.1,
-                }
-            },
-        },
+    carehome=patients.with_these_clinical_events(
+        carehome_codes,
+        on_or_before="last_day_of_month(index_date)",
+        returning="binary_flag",
+        return_expectations={"incidence": 0.2},
     ),
     # Practice
     practice=patients.registered_practice_as_of(

@@ -36,6 +36,53 @@ def subset_table(measure_table, measures_pattern, measures_list, date):
     return measure_table[measure_table["name"].isin(measures_list)]
 
 
+def is_bool_as_int(series):
+    """Does series have bool values but an int dtype?"""
+    # numpy.nan will ensure an int series becomes a float series, so we need to
+    # check for both int and float
+    if not pandas.api.types.is_bool_dtype(
+        series
+    ) and pandas.api.types.is_numeric_dtype(series):
+        series = series.dropna()
+        return ((series == 0) | (series == 1)).all()
+    elif not pandas.api.types.is_bool_dtype(
+        series
+    ) and pandas.api.types.is_object_dtype(series):
+        try:
+            series = series.astype(int)
+        except ValueError:
+            return False
+        series = series.dropna()
+        return ((series == 0) | (series == 1)).all()
+    else:
+        return False
+
+
+def series_to_bool(series):
+    if is_bool_as_int(series):
+        return series.astype(int).astype(bool)
+    else:
+        return series
+
+
+# NOTE: This will not work if the variable to flatten was last in the groupby
+def flatten(df):
+    """
+    If a category has only one value and the group has boolean values, then
+    filter for rows where that value is true
+    Create new columns group and category with the last seen group/category
+    """
+    df = df.dropna(axis=1, how="all")
+    df = df.apply(lambda x: series_to_bool(x) if "group" in x.name else x)
+    for category in df.filter(regex="category"):
+        group = f"{category.replace('category', 'group')}"
+        if len(df[category].unique()) == 1 and df[group].dtype == "bool":
+            df = df[df[group]]
+    df["group"] = df[group]
+    df["category"] = df[category]
+    return df
+
+
 def transform_percentage(x):
     transformed = (
         x.astype(str)
@@ -92,7 +139,8 @@ def parse_args():
     measures_group.add_argument(
         "--measures-list",
         required=False,
-        help="A list of one or more measure names for rows",
+        action="append",
+        help="Manually provide a list of one or more measure names for rows",
     )
     parser.add_argument(
         "--column-names",
@@ -105,6 +153,11 @@ def parse_args():
         type=pathlib.Path,
         help="Path to the output directory",
     )
+    parser.add_argument(
+        "--output-name",
+        required=True,
+        help="Name for panel plot",
+    )
     return parser.parse_args()
 
 
@@ -114,6 +167,7 @@ def main():
     measures_pattern = args.measures_pattern
     measures_list = args.measures_list
     output_dir = args.output_dir
+    output_name = args.output_name
     columns = args.column_names
 
     measure_table = get_measure_tables(input_file)
@@ -121,14 +175,17 @@ def main():
         measure_table, measures_pattern, measures_list, start_date
     )
 
-    subset = title_format(subset)
-
     table1 = pandas.DataFrame()
     for column in columns:
-        sub = subset[subset.Name.str.contains(column)]
+        sub = subset[subset.name.str.contains(column)]
+        sub = flatten(sub)
+        sub = title_format(sub)
         sub = sub.set_index(["Category", "Group"])
         sub = sub[["Numerator", "Denominator"]]
         sub = sub.apply(pandas.to_numeric, errors="coerce")
+        overall = sub.loc[sub.iloc[0].name[0]].sum()
+        overall.name = ("Total", "")
+        sub = pandas.concat([pandas.DataFrame(overall).T, sub])
         sub = get_percentages(sub)
         sub.columns = pandas.MultiIndex.from_product(
             [[f"{column.title()}"], sub.columns]
@@ -138,7 +195,7 @@ def main():
         else:
             table1 = table1.join(sub)
 
-    table1.to_html(output_dir / "table1.html", index=True)
+    table1.to_html(output_dir / output_name, index=True)
 
 
 if __name__ == "__main__":

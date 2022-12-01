@@ -2,7 +2,7 @@
 start_date = "2019-01-01"
 
 # study end date.  should match date in project.yaml
-end_date = "2022-07-01"
+end_date = "2022-11-01"
 
 # depression register start date
 depr_register_date = "2006-04-01"
@@ -25,7 +25,7 @@ demographics = [
 # them as labels. We still need to extract the numerical group for use in
 # the measures framework
 # Key is the label, value is the numerical
-lda_subgroups = {"autism": "aut", "learning_disability": "ld"}
+lda_subgroups = ["autism", "learning_disability"]
 
 # name of measure
 marker = "Depression review"

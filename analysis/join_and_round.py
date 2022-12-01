@@ -9,19 +9,13 @@ MEASURE_FNAME_REGEX = re.compile(r"measure_(?P<id>\S+)\.csv")
 
 
 def _check_for_practice(table):
-    if "practice" in table.category.values:
+    if "practice" in table.filter(regex="category").values:
         raise (
             AssertionError("Practice-level data should not be in final output")
         )
 
 
 def _reshape_data(measure_table):
-    try:
-        assert len(measure_table.columns) < 6
-    except AssertionError:
-        raise (
-            AssertionError("This script only supports one group_by category")
-        )
     if measure_table.date[0] != measure_table.date[1]:
         # if sequential rows have different dates, then an individual date's
         # data has not been subdivided by category, and we can assume that
@@ -29,29 +23,49 @@ def _reshape_data(measure_table):
         # Therefore, the numerator and denominator will be the first columns
         numerator = measure_table.columns[0]
         denominator = measure_table.columns[1]
-        measure_table["category"] = "population"
-        measure_table["group"] = "population"
+        measure_table["category_0"] = "population"
+        measure_table["group_0"] = "population"
         group_by = None
         measure_table["name"] = measure_table.attrs["id"]
+        measure_table.rename(
+            columns={
+                numerator: "numerator",
+                denominator: "denominator",
+                group_by: "group",
+            },
+            inplace=True,
+        )
+        # Assume we only need the numerator and the denominator
+        measure_table.drop(
+            columns=["population"], inplace=True, errors="ignore"
+        )
+        return measure_table
 
     else:
         denominator = measure_table.columns[-3]
         numerator = measure_table.columns[-4]
-        group_by = measure_table.columns[-5]
-        measure_table["category"] = group_by
+        group_by = measure_table.columns[:-4]
         measure_table["name"] = measure_table.attrs["id"]
+        for index, group in enumerate(group_by):
+            measure_table[f"category_{index}"] = group
+            measure_table[f"group_{index}"] = measure_table[group]
 
-    measure_table.rename(
-        columns={
-            numerator: "numerator",
-            denominator: "denominator",
-            group_by: "group",
-        },
-        inplace=True,
-    )
-    # Assume we only need the numerator and the denominator
-    measure_table.drop(columns=["population"], inplace=True, errors="ignore")
-    return measure_table
+        measure_table.rename(
+            columns={
+                numerator: "numerator",
+                denominator: "denominator",
+            },
+            inplace=True,
+        )
+
+        keep = [
+            x
+            for x in measure_table.columns
+            if x in ["name", "numerator", "denominator", "date", "value"]
+            or ("group" in x)
+            or ("category" in x)
+        ]
+        return measure_table[keep]
 
 
 def _join_tables(tables):
