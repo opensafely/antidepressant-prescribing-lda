@@ -3,6 +3,7 @@ import pathlib
 import fnmatch
 import pandas
 import numpy
+import scipy
 
 import matplotlib.pyplot as plt
 import dataframe_image as dfi
@@ -10,11 +11,19 @@ from collections import Counter
 
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+from statsmodels.tsa.deterministic import Fourier
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from patsy.contrasts import Treatment
 
-# from statsmodels.tsa.arima.model import ARIMA
-import scipy as sp
 
 plt.style.use("seaborn-whitegrid")
+
+
+def lrtest(smaller, bigger):
+    ll_smaller = smaller.llf
+    ll_bigger = bigger.llf
+    stat = -2 * (ll_smaller - ll_bigger)
+    return scipy.stats.chi2.sf(stat, 2)
 
 
 def autoselect_labels(measures_list):
@@ -36,24 +45,85 @@ def get_table(measure_table, group_by):
     a regression model for each one
     """
     rows = {}
-    for subgroup, subgroup_data in measure_table.groupby(measure_table.name.str.contains("new")):
+    for subgroup, subgroup_data in measure_table.groupby(
+        measure_table.name.str.contains("new")
+    ):
         repeated = autoselect_labels(subgroup_data.name.unique())
         if subgroup:
             key = f"New {repeated[0]}".title()
+            lags = 0
         else:
             key = f"All {repeated[0]}".title()
+            lags = 2
         for subsubgroup, subsubgroup_data in subgroup_data.groupby(group_by):
             label = translate_group(subsubgroup, repeated)
-            df, step_time, step2_time, end = get_its_variables(
-                subsubgroup_data, "2020-03-01", "2021-04-01"
-            )
-            poisson = get_poisson(df)
-            row = get_coef(poisson, subgroup)
+            if len(subsubgroup_data.group_0.unique()) > 1:
+                # subsubgroup_data = add_control_variables(subsubgroup_data, "group")
+                formula = get_formula(
+                    subsubgroup_data,
+                    interaction_term="group",
+                    reference="Depression register",
+                )
+                model = get_regression(subsubgroup_data, lags, formula)
+                forest_plot(model)
+            else:
+                fourier = get_fourier(subsubgroup_data)
+                formula = get_formula(
+                    subsubgroup_data, fourier_terms=fourier.columns
+                )
+                model = get_regression(
+                    pandas.concat([subsubgroup_data, fourier], axis=1),
+                    lags,
+                    formula,
+                )
+            row = get_coef(model, subgroup)
             rows[(key, label)] = row
     index = pandas.MultiIndex.from_tuples(rows.keys())
     table = pandas.concat(rows.values(), keys=index)
     table.index = index
     return table
+
+
+def forest_plot(model):
+    import matplotlib.pyplot as plt
+
+    coef = model.params
+    cis = model.conf_int().rename(columns={0: "lci", 1: "uci"})
+    df = pandas.concat([coef, cis], axis=1)
+    df = df[df.index.str.contains(":")]
+
+    keys = list(df.index)
+    indices = []
+    for key in keys:
+        x, y = key.split(":")
+        indices.append((x, (y.split(".")[-1]).rstrip("]")))
+
+    renamed = df.set_index(pandas.MultiIndex.from_tuples(indices))
+
+    import code
+
+    code.interact(local=locals())
+    diff = df.uci - df.lci
+    plt.figure(figsize=(6, 4), dpi=150)
+    plt.errorbar(
+        x=renamed[0].values,
+        y=df.index.values,
+        xerr=diff,
+        color="black",
+        capsize=3,
+        linestyle="None",
+        linewidth=1,
+        marker="o",
+        markersize=5,
+        mfc="black",
+        mec="black",
+    )
+    plt.axvline(x=1, linewidth=0.8, linestyle="--", color="black")
+    plt.tick_params(axis="both", which="major", labelsize=8)
+    plt.xlabel("Odds Ratio and 95% Confidence Interval", fontsize=8)
+    plt.tight_layout()
+    # plt.savefig('raw_forest_plot.png')
+    plt.show()
 
 
 def translate_to_ci(coef, cis, name, round_to=2):
@@ -73,11 +143,11 @@ def translate_to_ci(coef, cis, name, round_to=2):
     df = df.loc[mapping.keys()]
     df = df.set_index(pandas.MultiIndex.from_tuples(mapping.values()))
     pcnt = (
-        round(100 * df[0], 2).astype(str)
+        round(df[0], 2).astype(str)
         + "% ("
-        + round(100 * df.lci, 2).astype(str)
+        + round(df.lci, 2).astype(str)
         + "% to "
-        + round(100 * df.uci, 2).astype(str)
+        + round(df.uci, 2).astype(str)
         + "%)"
     )
     pcnt.name = name
@@ -98,21 +168,53 @@ def check_residuals(resid):
     resid.plot(kind="kde")
     plt.show()
 
-    sm.qqplot(resid, sp.stats.t, fit=True, line="45")
+    sm.qqplot(resid, scipy.stats.t, fit=True, line="45")
     plt.show()
 
 
-def get_poisson(df):
+def get_fourier(df):
+    fourier_gen = Fourier(12, order=2)
+    fourier_vars = fourier_gen.in_sample(df.index)
+    fourier_vars.columns = ["s1", "c1", "s2", "c2"]
+    return fourier_vars
+
+
+def get_regression(df, lags, formula):
     model = smf.glm(
-        "numerator ~ time + step + slope + step2 + slope2 + mar20 + april20",
+        formula,
         data=df,
-        family=sm.families.Poisson(),
+        family=sm.families.NegativeBinomial(),
         exposure=df.denominator,
+    ).fit(maxiter=200)
+    if not model.converged:
+        raise ConvergenceWarning("Failed to converge")
+    model_errors = smf.glm(
+        formula,
+        data=df,
+        family=sm.families.NegativeBinomial(),
+        exposure=df.denominator,
+    ).fit(cov_type="HAC", cov_kwds={"maxlags": lags}, maxiter=200)
+    print(model.summary())
+    print(model_errors.summary())
+    #check_residuals(model.resid_pearson)
+    #check_residuals(model_errors.resid_pearson)
+    return model_errors
+
+
+def get_formula(df, fourier_terms=None, interaction_term=None, reference=None):
+    formula = (
+        "numerator ~ time + step + slope + mar20 + april20 + step2 + slope2"
     )
-    res = model.fit(cov_type="HAC", cov_kwds={"maxlags": 4}, maxiter=200)
-    print(res.summary())
-    # check_residuals(res.resid_pearson)
-    return res
+    if interaction_term:
+        df.group = df.group.astype("category")
+        levels = list(df.group.unique())
+        levels.remove(reference)
+        levels = [reference] + levels
+        df.group = df.group.cat.reorder_categories(levels)
+        formula += f"+ step*{interaction_term} + slope*{interaction_term} + step2*{interaction_term} + slope2*{interaction_term}"
+    if fourier_terms is not None:
+        formula += "+ " + "+".join(fourier_terms)
+    return formula
 
 
 def get_ols(df):
@@ -130,34 +232,6 @@ def get_ols(df):
     print(res.summary())
     # check_residuals(res.resid)
     return res
-
-
-"""
-def get_its_arima(df, start, step2, end):
-    dummies = pandas.get_dummies(
-        pandas.to_datetime(df.date).dt.month_name(), prefix=None
-    )
-    df = pandas.concat([df, dummies], axis=1)
-    df = df.reset_index()
-    arima_results = ARIMA(
-        df["rate"],
-        df[["time", "step", "slope", "step2", "slope2", "mar20"]],
-        order=(1, 0, 0),
-    ).fit()
-    print(arima_results.summary())
-    # check_residuals(arima_results.resid)
-    predictions = arima_results.get_prediction(0, end - 1)
-
-    arima_cf = ARIMA(
-        df["rate"][:start], df["time"][:start], order=(1, 0, 0)
-    ).fit()
-    # Model predictions means
-    y_pred = predictions.predicted_mean
-    # Counterfactual mean and 95% confidence interval
-    y_cf = arima_cf.get_forecast(
-        end - 1, exog=df["time"][start:]
-    ).summary_frame(alpha=0.05)
-"""
 
 
 def get_coef(res, name):
@@ -180,6 +254,7 @@ def plot_model(res, df, start, step2):
 
     # counter-factual predictions
     cf = res.get_prediction(cf_df).summary_frame(alpha=0.05)
+    # TODO: add group into df so we can group the plot
 
     cf2_df = df.copy()
     cf2_df["slope2"] = 0.0
@@ -256,6 +331,7 @@ def get_its_variables(dataframe, cutdate1, cutdate2):
     )
     cutmonth1 = df[df["date"] == cutdate1].iloc[0].time - 1
     cutmonth2 = df[df["date"] == cutdate2].iloc[0].time - 1
+    #NOTE: dropping Nov 2022 (not full month of data)
     end = df.iloc[-1].time
     df["step"] = df.apply(lambda x: 1 if x.time > cutmonth1 else 0, axis=1)
     df["slope"] = df.apply(lambda x: max(x.time - cutmonth1, 0), axis=1)
@@ -270,6 +346,16 @@ def get_its_variables(dataframe, cutdate1, cutdate2):
     df["index"] = df["time"]
     df = df.set_index("index")
     return (df, cutmonth1, cutmonth2, end)
+
+
+def add_control_variables(df, groupby):
+    df[groupby] = df[groupby].astype(int)
+    df["time_z"] = df["time"] * df[groupby]
+    df["step_z"] = df["step"] * df[groupby]
+    df["slope_z"] = df["slope"] * df[groupby]
+    df["step2_z"] = df["step2"] * df[groupby]
+    df["slope2_z"] = df["slope2"] * df[groupby]
+    return df
 
 
 def get_measure_tables(input_file):
@@ -360,11 +446,22 @@ def main():
     # Parse the names field to determine which subset to use
     subset = subset_table(measure_table, measures_pattern, measures_list)
     numeric = coerce_numeric(subset)
+    # NOTE: remove the incomplete November month
+    numeric = numeric[numeric["date"] != "2022-11-01"]
     df, step_time, step2_time, end = get_its_variables(
         numeric, "2020-03-01", "2021-04-01"
     )
-    table = get_table(df, "group")
-    #dfi.export(table, output_dir / "its_table.png")
+    dummies = pandas.get_dummies(
+        pandas.to_datetime(df.date).dt.month_name(), prefix=None
+    )
+    df = pandas.concat([df, dummies], axis=1)
+    # df = df[df["group"] == "1"]
+    # df = add_control_variables(df, "group")
+    # df = df.reset_index()
+    #formula = get_formula(df)
+    #model = get_regression(df, 2, formula)
+    # plot_model(model, df, step_time, step2_time)
+    table = get_table(df, "category_0")
     dfi.export(table, "its_table.png")
 
 
