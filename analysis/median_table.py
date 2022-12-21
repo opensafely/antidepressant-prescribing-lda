@@ -12,9 +12,7 @@ Generate median table from joined measures file.
 
 # NOTE: PERCENTAGE
 def get_median(df):
-    sub = df[["numerator", "denominator"]]
-    numeric = sub.apply(pandas.to_numeric, errors="coerce")
-    rate = 100 * numeric.numerator / numeric.denominator
+    rate = 100 * df.numerator / df.denominator
     q_25 = round(rate.quantile(0.25), 2)
     q_50 = round(rate.quantile(0.50), 2)
     q_75 = round(rate.quantile(0.75), 2)
@@ -30,6 +28,19 @@ def get_median_table(measure_table):
     columns = []
     for title, (start, end) in mapping.items():
         data = subset_table(measure_table, start, end)
+        data = data.set_index(["category", "group", "date"])
+        data = data[["numerator", "denominator"]]
+        data = data.apply(pandas.to_numeric, errors="coerce")
+        overall = (
+            data.loc[data.iloc[0].name[0]]
+            .groupby("date")
+            .apply(sum)
+            .reset_index()
+        )
+        overall["category"] = "total"
+        overall["group"] = ""
+        overall = overall.set_index(["category", "group", "date"])
+        data = pandas.concat([pandas.DataFrame(overall), data])
         column = data.groupby(["category", "group"]).apply(
             lambda x: get_median(x)
         )
