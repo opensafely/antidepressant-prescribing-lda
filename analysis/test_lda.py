@@ -4,28 +4,7 @@ import pathlib
 import pandas
 
 
-def count_any_over_time(df):
-    df = df[df["antidepressant_any"] == 1]
-    df = df.sort_values(["patient_id", "date"])
-    df["order"] = (
-        df.groupby(["patient_id"]).cumcount().apply(lambda x: f"date_{x}")
-    )
-    df = df.pivot(index="patient_id", columns="order", values="date")
-    prescriptions_per_person = df.count(axis=1).mean()
-    output = {
-        "prescriptions_per_person": round(prescriptions_per_person, 1),
-        **df.count(),
-    }
-
-    for previous, current in zip(df.columns, df.columns[1:]):
-        output[f"{current}_{previous}"] = round(
-            (df[current] - df[previous]).dt.days.mean()
-        )
-
-    return pandas.DataFrame(list(output.items()))
-
-
-def count_multiple_prescriptions(df):
+def check_input(df):
     multiple_prescriptions = df[
         (
             df["antidepressant_ssri"]
@@ -34,18 +13,15 @@ def count_multiple_prescriptions(df):
         )
         > 1
     ]
-    count = multiple_prescriptions.groupby("date").count().antidepressant_any
-    count.name = "count"
-    total = (
-        (df[df["antidepressant_any"] == 1])
-        .groupby("date")
-        .count()
-        .antidepressant_any
-    )
-    total.name = "total"
-    result = pandas.concat([count, total], axis=1)
-    result["percent"] = 100 * result["count"] / result["total"]
-    return pandas.DataFrame(result["percent"].to_dict().items())
+    any_prescription = df["antidepressant_any"]
+
+    output = {
+        "multiple_prescriptions": len(multiple_prescriptions),
+        "multiple_prescriptions_pcnt": 100
+        * len(multiple_prescriptions)
+        / len(any_prescription),
+    }
+    return pandas.DataFrame(list(output.items()))
 
 
 def get_extension(path):
@@ -112,28 +88,10 @@ def main():
     output_dir = args.output_dir
 
     output_dir.mkdir(exist_ok=True)
-    tables = []
     for input_table in get_input_table(input_files):
         fname = input_table.attrs["fname"]
-        d = fname.split("_")[-1].split(".")[0]
-        analysis_table = input_table[
-            [
-                "patient_id",
-                "antidepressant_any",
-                "antidepressant_ssri",
-                "antidepressant_tricyclic",
-                "antidepressant_other",
-            ]
-        ]
-        analysis_table["date"] = pandas.to_datetime(d, format="%Y-%m-%d")
-        tables.append(analysis_table)
-    df = pandas.concat(tables)
-    any_results = count_any_over_time(
-        df[["antidepressant_any", "patient_id", "date"]]
-    )
-    multiple = count_multiple_prescriptions(df)
-    all_results = pandas.concat([any_results, multiple])
-    write_input_table(all_results, output_dir / "test_study_period.csv")
+        test_results = check_input(input_table)
+        write_input_table(test_results, output_dir / fname)
 
 
 if __name__ == "__main__":
