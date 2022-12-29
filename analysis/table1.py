@@ -18,7 +18,7 @@ def get_measure_tables(input_file):
     return measure_table
 
 
-def subset_table(measure_table, measures_pattern, measures_list, date):
+def subset_table(measure_table, measures_pattern, date):
     """
     Given either a pattern of list of names, extract the subset of a joined
     measures file based on the 'name' column
@@ -26,14 +26,19 @@ def subset_table(measure_table, measures_pattern, measures_list, date):
 
     measure_table = measure_table[measure_table["date"] == date]
 
-    if measures_pattern:
-        measures_list = match_paths(measure_table["name"], measures_pattern)
-        if len(measures_list) == 0:
-            raise ValueError("Pattern did not match any files")
+    measures_list = []
+    for pattern in measures_pattern:
+        paths_to_add = match_paths(measure_table["name"], pattern)
+        if len(paths_to_add) == 0:
+            raise ValueError(f"Pattern did not match any rows: {pattern}")
+        measures_list += paths_to_add
 
-    if not measures_list:
-        return measure_table
-    return measure_table[measure_table["name"].isin(measures_list)]
+    table_subset = measure_table[measure_table["name"].isin(measures_list)]
+
+    if table_subset.empty:
+        raise ValueError("Patterns did not match any rows")
+
+    return table_subset
 
 
 def is_bool_as_int(series):
@@ -100,22 +105,34 @@ def get_percentages(df):
     After computation is complete, replace nan with "REDACTED" again
     """
     percent = df.groupby(level=0).transform(transform_percentage)
-    percent.Numerator = percent.Numerator.replace("nan (nan)", "[REDACTED]")
-    percent.Denominator = percent.Denominator.replace(
+    percent.numerator = percent.numerator.replace("nan (nan)", "[REDACTED]")
+    percent.denominator = percent.denominator.replace(
         "nan (nan)", "[REDACTED]"
     )
     percent = percent.rename(
         columns={
-            "Numerator": "Numerator (%)",
-            "Denominator": "Denominator (%)",
+            "numerator": "No. prescribed antidepressant (%)",
+            "denominator": "No. registered patients (%)",
         }
     )
     return percent
 
 
-def title_format(df):
-    df.category = df.category.str.title()
-    df.columns = [x.title() for x in df.columns]
+def title_multiindex(df):
+    titled = []
+    # NOTE: dataframe must be sorted, otherwise new index may not match
+    df = df.sort_index()
+    for category, data in df.groupby(level=0):
+        category = category.replace("_", " ")
+        group = data.index.get_level_values(1).to_series()
+        group = group.replace({"Unknown": "Missing"})
+        group = group.fillna("Missing")
+        group = series_to_bool(group)
+        titled += [
+            (str(category).title(), str(item).title())
+            for item in group.to_list()
+        ]
+    df.index = pandas.MultiIndex.from_tuples(titled)
     return df
 
 
@@ -130,17 +147,11 @@ def parse_args():
         required=True,
         help="Path to single joined measures file",
     )
-    measures_group = parser.add_mutually_exclusive_group(required=True)
-    measures_group.add_argument(
+    parser.add_argument(
         "--measures-pattern",
-        required=False,
-        help="Glob pattern matching one or more measures names for rows",
-    )
-    measures_group.add_argument(
-        "--measures-list",
-        required=False,
+        required=True,
         action="append",
-        help="Manually provide a list of one or more measure names for rows",
+        help="Glob pattern matching one or more measures names for rows",
     )
     parser.add_argument(
         "--column-names",
@@ -165,23 +176,19 @@ def main():
     args = parse_args()
     input_file = args.input_file
     measures_pattern = args.measures_pattern
-    measures_list = args.measures_list
     output_dir = args.output_dir
     output_name = args.output_name
     columns = args.column_names
 
     measure_table = get_measure_tables(input_file)
-    subset = subset_table(
-        measure_table, measures_pattern, measures_list, start_date
-    )
+    subset = subset_table(measure_table, measures_pattern, start_date)
 
     table1 = pandas.DataFrame()
     for column in columns:
         sub = subset[subset.name.str.contains(column)]
         sub = flatten(sub)
-        sub = title_format(sub)
-        sub = sub.set_index(["Category", "Group"])
-        sub = sub[["Numerator", "Denominator"]]
+        sub = sub.set_index(["category", "group"])
+        sub = sub[["numerator", "denominator"]]
         sub = sub.apply(pandas.to_numeric, errors="coerce")
         overall = sub.loc[sub.iloc[0].name[0]].sum()
         overall.name = ("Total", "")
@@ -195,6 +202,7 @@ def main():
         else:
             table1 = table1.join(sub)
 
+    table1 = title_multiindex(table1)
     table1.to_html(output_dir / output_name, index=True)
 
 

@@ -1,5 +1,5 @@
 # study start date.  should match date in project.yaml
-start_date = "2019-01-01"
+start_date = "2018-01-01"
 
 # study end date.  should match date in project.yaml
 end_date = "2022-11-01"
