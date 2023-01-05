@@ -31,7 +31,7 @@ def get_fourier(df):
     fourier_gen = Fourier(12, order=2)
     fourier_vars = fourier_gen.in_sample(df.index)
     fourier_vars.columns = ["s1", "c1", "s2", "c2"]
-    return fourier_vars
+    return fourier_vars[["s1", "c1"]]
 
 
 def get_formula(
@@ -67,36 +67,25 @@ def get_regression(df, lags, formula, interaction_group):
     data
 
     """
-    model = smf.glm(
-        formula,
-        data=df,
-        family=sm.families.NegativeBinomial(),
-        exposure=df.denominator,
-    ).fit(maxiter=200)
-    if not model.converged:
-        raise ConvergenceWarning("Failed to converge")
     if interaction_group is None:
-        model_errors = smf.glm(
+        model_errors = smf.poisson(
             formula,
             data=df,
-            family=sm.families.NegativeBinomial(),
             exposure=df.denominator,
         ).fit(cov_type="HAC", cov_kwds={"maxlags": lags}, maxiter=200)
     else:
-        df = df.sort_values(interaction_group)
-        model_errors = smf.glm(
+        model_errors = smf.poisson(
             formula,
             data=df,
-            family=sm.families.NegativeBinomial(),
             exposure=df.denominator,
         ).fit(
-            cov_type="hac-panel",
-            cov_kwds={"groups": df[interaction_group], "maxlags": lags},
+            cov_type="hac-groupsum",
+            cov_kwds={"time": df.index, "maxlags": lags},
             maxiter=200,
         )
-    print(model.summary())
     print(model_errors.summary())
-    # check_residuals(model.resid_pearson)
+    if not model_errors.mle_retvals["converged"]:
+        raise ConvergenceWarning("Failed to converge")
     # check_residuals(model_errors.resid_pearson)
     return model_errors
 
@@ -260,7 +249,7 @@ def plot(
     row, col, index = pos
     ax = fig.add_subplot(row, col, index, sharex=other_ax, sharey=other_ax)
     for group, data in df.groupby(interaction_group):
-        predictions = model.get_prediction(data).summary_frame(alpha=0.05)
+        predictions = model.predict(data).summary_frame(alpha=0.05)
         line = ax.plot(
             data["date"], 1000 * predictions["mean"], label=f"{group}"
         )
@@ -435,10 +424,10 @@ def translate_to_ci(model, name):
     return pandas.DataFrame(row).transpose()
 
 
-def plot_cf(model, df, date1, date2):
-    # TODO: a bit confusing for now, supplemental?
+def plot_cf(model, df):
     df = df.set_index("date")
-    predictions = model.get_prediction(df).summary_frame(alpha=0.05)
+    # predictions = model.get_prediction(df).summary_frame(alpha=0.05)
+    predictions = model.predict(df)
     predictions.index = df.index
 
     # counterfactual assumes no interventions
@@ -451,17 +440,17 @@ def plot_cf(model, df, date1, date2):
     cf_df["step2"] = 0.0
 
     # counter-factual predictions
-    cf = model.get_prediction(cf_df).summary_frame(alpha=0.05)
+    cf = model.predict(cf_df)
     cf.index = df.index
     # TODO: add group into df so we can group the plot
 
-    # cf2_df = df.copy()
-    # cf2_df["slope2"] = 0.0
-    # cf2_df["step2"] = 0.0
+    cf2_df = df.copy()
+    cf2_df["slope2"] = 0.0
+    cf2_df["step2"] = 0.0
 
     # counter-factual predictions
-    # cf2 = model.get_prediction(cf2_df).summary_frame(alpha=0.05)
-    # cf2.index = df.index
+    cf2 = model.predict(cf2_df)
+    cf2.index = df.index
 
     # Plotting
     fig, ax = plt.subplots(figsize=(16, 10))
@@ -476,17 +465,29 @@ def plot_cf(model, df, date1, date2):
         linewidths=2,
     )
 
-    # Plot model mean rate prediction
-    ax.plot(
+    ax.scatter(
         df.index,
-        predictions["mean"],
-        "b-",
+        predictions,
+        facecolors="black",
+        edgecolors="black",
         label="model prediction",
+        linewidths=2,
     )
-    # ax.plot(df[date1:].index, predictions["mean"][date1:], "g-")
+    # Plot prediction data
+    # ax.plot(
+    #    df.index,
+    #    predictions,
+    #    "b-",
+    #    label="model prediction",
+    # )
 
     # Plot counterfactual mean rate with 95% cis
-    ax.plot(df[date1:].index, cf["mean"][date1:], "k-", label="counterfactual")
+    ax.plot(
+        df[STEP_TIME_1:].index,
+        cf[STEP_TIME_1:],
+        "r--",
+        label="No COVID-19 counterfactual",
+    )
     # ax.fill_between(
     #    df[date1:].index,
     #    cf["mean_ci_lower"][date1:],
@@ -496,13 +497,13 @@ def plot_cf(model, df, date1, date2):
     #    label="counterfactual 95% CI",
     # )
 
-    # ax.plot(
-    #    df[date2:].index,
-    #    cf2["mean"][date2:],
-    #    "g-",
-    #    alpha=0.5,
-    #    label="counterfactual recovery",
-    # )
+    ax.plot(
+        df[STEP_TIME_2:].index,
+        cf2[STEP_TIME_2:],
+        "g--",
+        alpha=0.5,
+        label="No recovery counterfactual",
+    )
 
     # ax.fill_between(
     #    df[date1:].index,
@@ -514,8 +515,8 @@ def plot_cf(model, df, date1, date2):
     # )
 
     # Plot line marking intervention
-    ax.axvline(x=date1, label="March 2020")
-    ax.axvline(x=date2, label="recovery")
+    ax.axvline(x=STEP_TIME_1, label="March 2020")
+    ax.axvline(x=STEP_TIME_2, label="recovery")
     ax.legend(loc="best")
     plt.xlabel("Months")
     plt.ylabel("Rate per 1,000")
@@ -675,27 +676,36 @@ def figure_1(measure_table):
 
 def forest(measure_table):
     # Forest plot
-    # TODO: see if ethnicity/imd errors with panel corrections occur in R
     model_aut = pcnt_change(
         measure_table,
-        "antidepressant_any_new_autism_total_rate",
+        "antidepressant_any_autism_total_rate",
         interaction_group="group_0",
         reference="No recorded autism",
     )
     model_ld = pcnt_change(
         measure_table,
+        "antidepressant_any_learning_disability_total_rate",
+        interaction_group="group_0",
+        reference="No recorded learning_disability",
+    )
+    model_new_aut = pcnt_change(
+        measure_table,
+        "antidepressant_any_new_autism_total_rate",
+        interaction_group="group_0",
+        reference="No recorded autism",
+    )
+    model_new_ld = pcnt_change(
+        measure_table,
         "antidepressant_any_new_learning_disability_total_rate",
         interaction_group="group_0",
         reference="No recorded learning_disability",
     )
-    df = pandas.concat(
-        [
-            model_aut,
-            model_ld,
-        ]
-    )
+    new = pandas.concat([model_new_aut, model_new_ld]).reset_index()
+    new.group = new.group + " new"
+    new = new.set_index(["change", "group"])
+    df = pandas.concat([model_aut, model_ld, new])
 
-    fig = group_forest(df)
+    fig = group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
     plt.savefig("figure_2.png")
 
 
@@ -714,18 +724,18 @@ def forest_any(measure_table):
         interaction_group="group_0",
         reference="No recorded carehome",
     )
-    # model_ethnicity = pcnt_change(
-    #    measure_table,
-    #    "antidepressant_any_all_breakdown_ethnicity_rate",
-    #    interaction_group="group_0",
-    #    reference="White",
-    # )
-    # model_imd = pcnt_change(
-    #    measure_table,
-    #    "antidepressant_any_all_breakdown_imd_rate",
-    #    interaction_group="group_0",
-    #    reference="3",
-    # )
+    model_ethnicity = pcnt_change(
+        measure_table,
+        "antidepressant_any_all_breakdown_ethnicity_rate",
+        interaction_group="group_0",
+        reference="White",
+    )
+    model_imd = pcnt_change(
+        measure_table,
+        "antidepressant_any_all_breakdown_imd_rate",
+        interaction_group="group_0",
+        reference="3",
+    )
     model_region = pcnt_change(
         measure_table,
         "antidepressant_any_all_breakdown_region_rate",
@@ -748,8 +758,8 @@ def forest_any(measure_table):
         [
             model_age,
             model_carehome,
-            # model_ethnicity,
-            # model_imd,
+            model_ethnicity,
+            model_imd,
             model_region,
             model_sex,
             model_diagnosis,
@@ -776,27 +786,27 @@ def forest_autism(measure_table):
         reference="30-39",
         convert_flat=True,
     )
-    # model_ethnicity = pcnt_change(
-    #    measure_table,
-    #    "antidepressant_any_learning_disability_breakdown_ethnicity_rate",
-    #    interaction_group="group_1",
-    #    reference="White",
-    #    convert_flat=True,
-    # )
-    # model_imd = pcnt_change(
-    #    measure_table,
-    #    "antidepressant_any_learning_disability_breakdown_imd_rate",
-    #    interaction_group="group_1",
-    #    reference="3",
-    #    convert_flat=True,
-    # )
-    model_region = pcnt_change(
+    model_ethnicity = pcnt_change(
         measure_table,
-        "antidepressant_any_autism_breakdown_region_rate",
+        "antidepressant_any_autism_breakdown_ethnicity_rate",
         interaction_group="group_1",
-        reference="South East",
+        reference="White",
         convert_flat=True,
     )
+    model_imd = pcnt_change(
+        measure_table,
+        "antidepressant_any_autism_breakdown_imd_rate",
+        interaction_group="group_1",
+        reference="3",
+        convert_flat=True,
+    )
+    # model_region = pcnt_change(
+    #    measure_table,
+    #    "antidepressant_any_autism_breakdown_region_rate",
+    #    interaction_group="group_1",
+    #    reference="South East",
+    #    convert_flat=True,
+    # )
     model_sex = pcnt_change(
         measure_table,
         "antidepressant_any_autism_breakdown_sex_rate",
@@ -815,15 +825,15 @@ def forest_autism(measure_table):
         [
             model_age,
             model_carehome,
-            # model_ethnicity,
-            # model_imd,
-            model_region,
+            model_ethnicity,
+            model_imd,
+            # model_region,
             model_sex,
             model_diagnosis,
         ]
     )
 
-    fig = group_forest(df)
+    fig = group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
     plt.savefig("aut_breakdown.png")
 
 
@@ -843,20 +853,20 @@ def forest_ld(measure_table):
         reference="30-39",
         convert_flat=True,
     )
-    # model_ethnicity = pcnt_change(
-    #    measure_table,
-    #    "antidepressant_any_learning_disability_breakdown_ethnicity_rate",
-    #    interaction_group="group_1",
-    #    reference="White",
-    #    convert_flat=True,
-    # )
-    # model_imd = pcnt_change(
-    #    measure_table,
-    #    "antidepressant_any_learning_disability_breakdown_imd_rate",
-    #    interaction_group="group_1",
-    #    reference="3",
-    #    convert_flat=True,
-    # )
+    model_ethnicity = pcnt_change(
+        measure_table,
+        "antidepressant_any_learning_disability_breakdown_ethnicity_rate",
+        interaction_group="group_1",
+        reference="White",
+        convert_flat=True,
+    )
+    model_imd = pcnt_change(
+        measure_table,
+        "antidepressant_any_learning_disability_breakdown_imd_rate",
+        interaction_group="group_1",
+        reference="3",
+        convert_flat=True,
+    )
     model_region = pcnt_change(
         measure_table,
         "antidepressant_any_learning_disability_breakdown_region_rate",
@@ -882,15 +892,15 @@ def forest_ld(measure_table):
         [
             model_age,
             model_carehome,
-            # model_ethnicity,
-            # model_imd,
+            model_ethnicity,
+            model_imd,
             model_region,
             model_sex,
             model_diagnosis,
         ]
     )
 
-    fig = group_forest(df)
+    fig = group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
     plt.savefig("ld_breakdown.png")
 
 
@@ -1252,8 +1262,15 @@ def main():
     output_dir = args.output_dir
 
     measure_table = get_measure_tables(input_file)
+    model_all, its_data = get_model(
+        measure_table, "antidepressant_any_new_all_total_rate"
+    )
+    plot_cf(model_all, its_data)
     # table_any_new(measure_table)
-    forest_any(measure_table)
+    # forest(measure_table)
+    # forest_any(measure_table)
+    # forest_autism(measure_table)
+    # forest_ld(measure_table)
 
 
 if __name__ == "__main__":
