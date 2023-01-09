@@ -123,7 +123,7 @@ def flatten(df):
 
     """
     df = df.dropna(axis=1, how="all")
-    df.group_0 = df.group_0.apply(lambda x: series_to_bool(x))
+    df.group_0 = series_to_bool(df.group_0)
     if len(df["category_0"].unique()) == 1 and df["group_0"].dtype == "bool":
         df = df[df["group_0"]]
     return df
@@ -249,27 +249,23 @@ def plot(
     row, col, index = pos
     ax = fig.add_subplot(row, col, index, sharex=other_ax, sharey=other_ax)
     for group, data in df.groupby(interaction_group):
-        predictions = model.predict(data).summary_frame(alpha=0.05)
-        line = ax.plot(
-            data["date"], 1000 * predictions["mean"], label=f"{group}"
+        predictions = model.get_prediction(data).summary_frame(alpha=0.05)
+        ax.plot(
+            data["date"], 1000 * predictions["predicted"], label=f"{group}"
         )
-        dots = ax.scatter(data["date"], 1000 * data["value"])
+        ax.scatter(data["date"], 1000 * data["value"])
 
     # Plot line marking intervention
-    cut1 = ax.axvline(
+    ax.axvline(
         x=pandas.to_datetime(STEP_TIME_1), linestyle="--", color="black"
     )
-    cut2 = ax.axvline(
+    ax.axvline(
         x=pandas.to_datetime(STEP_TIME_2), linestyle="--", color="yellow"
     )
     ax.set_title(title)
     ax.set_ylabel(ylabel)
     ax.legend(bbox_to_anchor=(1, 1), loc="upper left", fontsize="x-small")
-    overall_legend = (
-        [line[0], dots, cut1, cut2],
-        ["Predicted", "Observed", "Lockdown", "Recovery"],
-    )
-    return (ax, overall_legend)
+    return ax
 
 
 def get_ci_df(model, round_to=2):
@@ -426,8 +422,7 @@ def translate_to_ci(model, name):
 
 def plot_cf(model, df):
     df = df.set_index("date")
-    # predictions = model.get_prediction(df).summary_frame(alpha=0.05)
-    predictions = model.predict(df)
+    predictions = model.get_prediction(df).summary_frame(alpha=0.05)
     predictions.index = df.index
 
     # counterfactual assumes no interventions
@@ -440,7 +435,7 @@ def plot_cf(model, df):
     cf_df["step2"] = 0.0
 
     # counter-factual predictions
-    cf = model.predict(cf_df)
+    cf = model.get_prediction(cf_df).summary_frame(alpha=0.05)
     cf.index = df.index
     # TODO: add group into df so we can group the plot
 
@@ -452,9 +447,6 @@ def plot_cf(model, df):
     cf2 = model.predict(cf2_df)
     cf2.index = df.index
 
-    # Plotting
-    fig, ax = plt.subplots(figsize=(16, 10))
-
     # Plot observed data
     ax.scatter(
         df.index,
@@ -464,7 +456,6 @@ def plot_cf(model, df):
         label="observed",
         linewidths=2,
     )
-
     ax.scatter(
         df.index,
         predictions,
@@ -473,13 +464,13 @@ def plot_cf(model, df):
         label="model prediction",
         linewidths=2,
     )
-    # Plot prediction data
-    # ax.plot(
-    #    df.index,
-    #    predictions,
-    #    "b-",
-    #    label="model prediction",
-    # )
+    ax.fill_between(
+        df.index,
+        1000 * predictions["ci_lower"],
+        1000 * predictions["ci_upper"],
+        color="k",
+        alpha=0.05,
+    )
 
     # Plot counterfactual mean rate with 95% cis
     ax.plot(
@@ -488,14 +479,13 @@ def plot_cf(model, df):
         "r--",
         label="No COVID-19 counterfactual",
     )
-    # ax.fill_between(
-    #    df[date1:].index,
-    #    cf["mean_ci_lower"][date1:],
-    #    cf["mean_ci_upper"][date1:],
-    #    color="k",
-    #    alpha=0.1,
-    #    label="counterfactual 95% CI",
-    # )
+    ax.fill_between(
+        df[STEP_TIME_1:].index,
+        1000 * cf["ci_lower"][STEP_TIME_1:],
+        1000 * cf["ci_upper"][STEP_TIME_1:],
+        color="r",
+        alpha=0.05,
+    )
 
     ax.plot(
         df[STEP_TIME_2:].index,
@@ -520,7 +510,7 @@ def plot_cf(model, df):
     ax.legend(loc="best")
     plt.xlabel("Months")
     plt.ylabel("Rate per 1,000")
-    plt.show()
+    return ax
 
 
 #######################
@@ -589,7 +579,7 @@ def figure_1(measure_table):
     model_all, all_data = get_model(
         measure_table, "antidepressant_any_all_total_rate"
     )
-    ax, overall_legend = plot(
+    ax = plot(
         fig,
         (3, 2, 1),
         model_all,
@@ -631,7 +621,7 @@ def figure_1(measure_table):
     model_new, new_data = get_model(
         measure_table, "antidepressant_any_new_all_total_rate"
     )
-    ax_new, _ = plot(
+    ax_new = plot(
         fig,
         (3, 2, 2),
         model_new,
@@ -669,8 +659,6 @@ def figure_1(measure_table):
         other_ax=ax_new,
     )
 
-    lines, labels = overall_legend
-    fig.legend(lines, labels, loc="right")
     plt.savefig("figure_1.png")
 
 
@@ -705,7 +693,7 @@ def forest(measure_table):
     new = new.set_index(["change", "group"])
     df = pandas.concat([model_aut, model_ld, new])
 
-    fig = group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
     plt.savefig("figure_2.png")
 
 
@@ -766,7 +754,7 @@ def forest_any(measure_table):
         ]
     )
 
-    fig = group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
     plt.savefig("figure_3.png")
 
 
@@ -833,7 +821,7 @@ def forest_autism(measure_table):
         ]
     )
 
-    fig = group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
     plt.savefig("aut_breakdown.png")
 
 
@@ -900,7 +888,7 @@ def forest_ld(measure_table):
         ]
     )
 
-    fig = group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
     plt.savefig("ld_breakdown.png")
 
 
@@ -917,6 +905,34 @@ def table_any_new(measure_table):
     dfi.export(table2, "table2.png")
 
 
+def plot_all_cf(measure_table):
+    fig = plt.figure(figsize=(14, 14), dpi=150)
+
+    model_all, all_data = get_model(
+        measure_table, "antidepressant_any_all_total_rate"
+    )
+    ax = plot_cf(
+        fig,
+        (2, 1, 1),
+        model_all,
+        all_data,
+        title="Any Antidepressant",
+    )
+
+    model_all_new, all_data_new = get_model(
+        measure_table, "antidepressant_any_new_all_total_rate"
+    )
+    plot_cf(
+        fig,
+        (2, 1, 2),
+        model_all_new,
+        all_data_new,
+        other_ax=ax,
+        title="New Antidepressant",
+    )
+    plt.savefig("cf.png")
+
+
 def plot_any_breakdowns(measure_table):
     fig = plt.figure(figsize=(14, 12), dpi=150, constrained_layout=True)
 
@@ -927,7 +943,7 @@ def plot_any_breakdowns(measure_table):
         reference="30-39",
         interaction_group="group_0",
     )
-    ax, overall_legend = plot(
+    plot(
         fig,
         (4, 2, 1),
         model_age_band,
@@ -1027,11 +1043,7 @@ def plot_any_breakdowns(measure_table):
         title="Sex",
     )
 
-    lines, labels = overall_legend
-    lgd = fig.legend(lines, labels, edgecolor="black", loc="lower right")
-    plt.savefig(
-        "any_breakdown.png", bbox_extra_artists=(lgd,), bbox_inches="tight"
-    )
+    plt.savefig("any_breakdown.png")
 
 
 def plot_autism_antidepressant_type(measure_table):
@@ -1044,7 +1056,7 @@ def plot_autism_antidepressant_type(measure_table):
         reference="No recorded autism",
         interaction_group="group_0",
     )
-    ax, overall_legend = plot(
+    ax = plot(
         fig,
         (3, 2, 1),
         model_ssri,
@@ -1131,8 +1143,6 @@ def plot_autism_antidepressant_type(measure_table):
         other_ax=ax_new,
     )
 
-    lines, labels = overall_legend
-    fig.legend(lines, labels, loc="right")
     plt.tight_layout()
     plt.savefig("autism_type.png")
 
@@ -1147,7 +1157,7 @@ def plot_ld_antidepressant_subtype(measure_table):
         reference="No recorded learning_disability",
         interaction_group="group_0",
     )
-    ax, overall_legend = plot(
+    ax = plot(
         fig,
         (3, 2, 1),
         model_ssri,
@@ -1234,8 +1244,6 @@ def plot_ld_antidepressant_subtype(measure_table):
         other_ax=ax_new,
     )
 
-    lines, labels = overall_legend
-    fig.legend(lines, labels, loc="right")
     plt.tight_layout()
     plt.savefig("learning_disability_type.png")
 
@@ -1265,7 +1273,8 @@ def main():
     model_all, its_data = get_model(
         measure_table, "antidepressant_any_new_all_total_rate"
     )
-    plot_cf(model_all, its_data)
+    # plot_all_cf(measure_table)
+    # figure_1(measure_table)
     # table_any_new(measure_table)
     # forest(measure_table)
     # forest_any(measure_table)
