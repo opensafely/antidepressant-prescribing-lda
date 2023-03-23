@@ -127,6 +127,7 @@ actions:
         moderately_sensitive:
           # Only output the single summary file
           measure_csv: output/lda/codelist_update/joined/measure_*_rate.csv
+          count_csv: output/lda/codelist_update/joined/measure_*_count.csv
 
   join_measures_lda:
       run: python:latest python analysis/join_and_round.py

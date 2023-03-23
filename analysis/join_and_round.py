@@ -42,10 +42,27 @@ def _reshape_data(measure_table):
         return measure_table
 
     else:
-        denominator = measure_table.columns[-3]
-        numerator = measure_table.columns[-4]
-        group_by = measure_table.columns[:-4]
-        measure_table["name"] = measure_table.attrs["id"]
+        # No denominator, just a count
+        # NOTE: denominator reconstruction may not work if there is redaction
+        if "count" in measure_table.attrs["id"]:
+            name = measure_table.attrs["id"]
+            copy = measure_table.copy()
+            group_by = copy.columns[:-3]
+            numerator = copy.columns[-3]
+            # Assume last groupby is the count
+            group_by_count = list(group_by[:-1]) + ["date"]
+            total = copy.groupby(group_by_count).sum()[numerator]
+            total.name = "denominator"
+            copy = copy.set_index(group_by_count)
+            copy = pandas.merge(copy, total, left_index=True, right_index=True)
+            measure_table = copy.reset_index()
+            measure_table["name"] = name
+            denominator = "denominator"
+        else:
+            group_by = measure_table.columns[:-4]
+            denominator = measure_table.columns[-3]
+            numerator = measure_table.columns[-4]
+            measure_table["name"] = measure_table.attrs["id"]
         for index, group in enumerate(group_by):
             measure_table[f"category_{index}"] = group
             measure_table[f"group_{index}"] = measure_table[group]
@@ -78,9 +95,6 @@ def get_measure_tables(input_files):
         if measure_fname_match is not None:
             # The `date` column is assigned by the measures framework.
             measure_table = pandas.read_csv(input_file, parse_dates=["date"])
-
-            # We can reconstruct the parameters passed to `Measure` without
-            # the study definition.
             measure_table.attrs["id"] = measure_fname_match.group("id")
             yield measure_table
 

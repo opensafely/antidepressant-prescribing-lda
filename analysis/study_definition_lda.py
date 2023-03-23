@@ -39,12 +39,6 @@ antidepressant_types = {
     "antidepressant_tricyclic": tricyclic_codes,
     "antidepressant_other": maoi_or_other_codes,
 }
-antidepressant_groups = [
-    "antidepressant_ssri",
-    "antidepressant_tricyclic",
-    "antidepressant_other",
-    "antidepressant_any",
-]
 
 
 def create_antidepressant_vars():
@@ -113,6 +107,27 @@ study = StudyDefinition(
     # QOF DEP003
     **depression_register_variables,
     **create_antidepressant_vars(),
+    prescription=patients.categorised_as(
+        {
+            "Unknown": "DEFAULT",
+            "multiple": "(antidepressant_ssri AND antidepressant_tricyclic) OR (antidepressant_ssri AND antidepressant_other) OR (antidepressant_tricyclic AND antidepressant_other)",
+            "ssri": "antidepressant_ssri",
+            "tricyclic": "antidepressant_tricyclic",
+            "other": "antidepressant_other",
+        },
+        return_expectations={
+            "rate": "universal",
+            "category": {
+                "ratios": {
+                    "Unknown": 0.8,
+                    "multiple": 0.01,
+                    "ssri": 0.08,
+                    "tricyclic": 0.08,
+                    "other": 0.03,
+                },
+            },
+        },
+    ),
     antidepressant_any=patients.satisfying(
         """
         antidepressant_ssri OR
@@ -210,6 +225,27 @@ measures = [
         group_by="population",
         small_number_suppression=True,
     ),
+    Measure(
+        id="antidepressant_any_all_total_rate",
+        numerator="antidepressant_any",
+        denominator="population",
+        group_by="population",
+        small_number_suppression=True,
+    ),
+    Measure(
+        id="antidepressant_any_new_all_total_rate",
+        numerator="antidepressant_any_new",
+        denominator="antidepressant_any_naive",
+        group_by="population",
+        small_number_suppression=True,
+    ),
+    Measure(
+        id="antidepressant_any_breakdown_type_count",
+        numerator="antidepressant_any",
+        denominator="antidepressant_any",
+        group_by=["prescription"],
+        small_number_suppression=True,
+    ),
 ]
 for group in lda_subgroups:
     m = Measure(
@@ -236,42 +272,30 @@ for group in lda_subgroups:
         small_number_suppression=True,
     )
     measures.append(m)
-
-for antidepressant_group in antidepressant_groups:
     m = Measure(
-        id=f"{antidepressant_group}_all_total_rate",
-        numerator=antidepressant_group,
+        id=f"antidepressant_any_{group}_total_rate",
+        numerator="antidepressant_any",
         denominator="population",
-        group_by="population",
+        group_by=[group],
         small_number_suppression=True,
     )
     measures.append(m)
     new_m = Measure(
-        id=f"{antidepressant_group}_new_all_total_rate",
-        numerator=f"{antidepressant_group}_new",
-        denominator=f"{antidepressant_group}_naive",
-        group_by="population",
+        id=f"antidepressant_any_new_{group}_total_rate",
+        numerator="antidepressant_any_new",
+        denominator="antidepressant_any_naive",
+        group_by=[group],
         small_number_suppression=True,
     )
     measures.append(new_m)
-    # Group rate by outcome
-    for group in lda_subgroups:
-        m = Measure(
-            id=f"{antidepressant_group}_{group}_total_rate",
-            numerator=f"{antidepressant_group}",
-            denominator="population",
-            group_by=[group],
-            small_number_suppression=True,
-        )
-        measures.append(m)
-        new_m = Measure(
-            id=f"{antidepressant_group}_new_{group}_total_rate",
-            numerator=f"{antidepressant_group}_new",
-            denominator=f"{antidepressant_group}_naive",
-            group_by=[group],
-            small_number_suppression=True,
-        )
-        measures.append(new_m)
+    m = Measure(
+        id=f"antidepressant_any_{group}_breakdown_type_count",
+        numerator="antidepressant_any",
+        denominator="antidepressant_any",
+        group_by=[group, "prescription"],
+        small_number_suppression=True,
+    )
+    measures.append(m)
 
 # Demographic trends in prescribing for each at-risk group
 # Use a set difference because there are some categories that are both
