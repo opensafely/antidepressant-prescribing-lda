@@ -16,7 +16,7 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
 STEP_TIME_1 = pandas.to_datetime("2020-03-01")
-STEP_TIME_2 = pandas.to_datetime("2021-03-01")
+STEP_TIME_2 = pandas.to_datetime("2021-04-01")
 
 ##################
 # Model building
@@ -435,6 +435,62 @@ def group_forest(df, columns, as_rr=[]):
     return fig
 
 
+def compute_rr(fig, pos, model, df, other_ax=None, title=None):
+    row, col, index = pos
+    ax = fig.add_subplot(row, col, index, sharex=other_ax, sharey=other_ax)
+
+    # We will only compute RR for restriction and recovery
+    df = df.set_index("date")
+    intervention_period = df[df.index >= STEP_TIME_1]
+
+    # Compute the fitted values
+    fitted = model.get_prediction(intervention_period).summary_frame(
+        alpha=0.05
+    )
+    fitted.index = intervention_period.index
+
+    # Compute the counterfactual (no COVID-19)
+    cf_df = intervention_period.copy()
+    cols = ["step", "slope", "step2", "slope2", "mar20", "april20"]
+    cf_df[cols] = 0
+    cf = model.get_prediction(cf_df).summary_frame(alpha=0.05)
+    cf.index = intervention_period.index
+
+    # RR is ratio of fitted to predicted
+    estimate = numpy.log(fitted["predicted"] / cf["predicted"])
+    estimate.name = "RR"
+
+    # Compute the variance of the RR
+    # i.e. sum the variance of the terms when simplifying (fitted/cf)
+    # Var(A + B) = Var(A) + Var(B) + 2Cov(A, B)
+    # or
+    # Var(A(x) + B(y)) = x^2Var(A) + y^2Var(B) + 2Cov(A, B)
+
+    # 1. Subset dataset and vcov matrix to relevant terms
+    df = intervention_period[cols]
+    vcov_full = model.cov_params()
+    vcov = vcov_full[cols].loc[cols]
+
+    # 2. Use matrix multiplication to sum the variances and covariances
+    var = pandas.Series(numpy.diag((df.dot(vcov)).dot(df.T)), df.index)
+    se = numpy.sqrt(var)
+
+    RR = pandas.DataFrame(estimate)
+    RR["lci"] = RR["RR"] - 1.96 * se
+    RR["uci"] = RR["RR"] + 1.96 * se
+    RR = numpy.exp(RR)
+
+    plt.vlines(RR.index, RR.lci, RR.uci, color="k")
+    ax.plot(RR.index, RR.RR, color="k")
+    ax.axhline(y=1.0, color="r", linestyle="--")
+    ax.set_title(title)
+    ax.set_ylabel(
+        "Relative Risk of Antidepressant Prescribing (95% CI)\nCompared to no COVID-19 counterfactual"
+    )
+    ax.set_xlabel("COVID-19 Period")
+    return ax
+
+
 def translate_to_ci(model, name):
     """
     Create a table from the confidence interval dataframe
@@ -456,7 +512,10 @@ def translate_to_ci(model, name):
     return pandas.DataFrame(row).transpose()
 
 
-def plot_cf(model, df):
+def plot_cf(fig, pos, model, df, other_ax=None, title=None):
+    row, col, index = pos
+    ax = fig.add_subplot(row, col, index, sharex=other_ax, sharey=other_ax)
+
     df = df.set_index("date")
     predictions = model.get_prediction(df).summary_frame(alpha=0.05)
     predictions.index = df.index
@@ -473,15 +532,6 @@ def plot_cf(model, df):
     # counter-factual predictions
     cf = model.get_prediction(cf_df).summary_frame(alpha=0.05)
     cf.index = df.index
-    # TODO: add group into df so we can group the plot
-
-    cf2_df = df.copy()
-    cf2_df["slope2"] = 0.0
-    cf2_df["step2"] = 0.0
-
-    # counter-factual predictions
-    cf2 = model.predict(cf2_df)
-    cf2.index = df.index
 
     # Plot observed data
     ax.scatter(
@@ -522,23 +572,6 @@ def plot_cf(model, df):
         color="r",
         alpha=0.05,
     )
-
-    ax.plot(
-        df[STEP_TIME_2:].index,
-        cf2[STEP_TIME_2:],
-        "g--",
-        alpha=0.5,
-        label="No recovery counterfactual",
-    )
-
-    # ax.fill_between(
-    #    df[date1:].index,
-    #    cf2["mean_ci_lower"][date1:],
-    #    cf2["mean_ci_upper"][date1:],
-    #    color="k",
-    #    alpha=0.1,
-    #    label="counterfactual recovery 95% CI",
-    # )
 
     # Plot line marking intervention
     ax.axvline(x=STEP_TIME_1, label="March 2020")
@@ -990,6 +1023,34 @@ def plot_all_cf(measure_table):
     plt.savefig("cf.png")
 
 
+def plot_all_rr(measure_table):
+    fig = plt.figure(figsize=(14, 14), dpi=150)
+
+    model_all, all_data = get_model(
+        measure_table, "antidepressant_any_all_total_rate"
+    )
+    ax = compute_rr(
+        fig,
+        (2, 1, 1),
+        model_all,
+        all_data,
+        title="Any Antidepressant",
+    )
+
+    model_all_new, all_data_new = get_model(
+        measure_table, "antidepressant_any_new_all_total_rate"
+    )
+    compute_rr(
+        fig,
+        (2, 1, 2),
+        model_all_new,
+        all_data_new,
+        other_ax=ax,
+        title="New Antidepressant",
+    )
+    plt.savefig("rr.png")
+
+
 def plot_any_breakdowns(measure_table):
     fig = plt.figure(figsize=(14, 12), dpi=150, constrained_layout=True)
 
@@ -1140,7 +1201,6 @@ def main():
     output_dir = args.output_dir
 
     measure_table = get_measure_tables(input_file)
-    # There are no prescription "Unknown", so remove
     measure_table = measure_table[
         ~(
             measure_table["name"].str.contains("prescription")
@@ -1151,6 +1211,7 @@ def main():
         )
     ].reset_index(drop=True)
 
+    plot_all_rr(measure_table)
     # figure_1(measure_table)
     # table_any_new(measure_table)
     # forest(measure_table)
