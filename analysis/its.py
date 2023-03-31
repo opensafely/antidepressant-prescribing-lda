@@ -6,7 +6,6 @@ import numpy
 import scipy
 
 import matplotlib.pyplot as plt
-import dataframe_image as dfi
 from pandas.api.types import is_numeric_dtype
 
 import statsmodels.api as sm
@@ -289,7 +288,7 @@ def get_ci_label(df, round_to=2, pcnt=True):
             axis=0,
         )
         label = df.apply(
-            lambda x: f"{x.coef:.2f}% ({x.lci:.2f}% to {x.uci:.2f})%"
+            lambda x: f"{x.coef:.2f}% ({x.lci:.2f}% to {x.uci:.2f}%)"
             if x.coef != 0
             else f"{'-': <15}",
             axis=1,
@@ -491,11 +490,11 @@ def compute_rr(fig, pos, model, df, other_ax=None, title=None):
     return ax
 
 
-def translate_to_ci(model, name):
+def translate_to_ci(coefs, name):
     """
     Create a table from the confidence interval dataframe
     """
-    df = get_ci_label(model)
+    df = get_ci_label(coefs)
     mapping = {
         "time": ("", "Pre-COVID-19 monthly slope (95% CI)"),
         "mar20": ("", "March 2020 (95% CI)"),
@@ -536,46 +535,31 @@ def plot_cf(fig, pos, model, df, other_ax=None, title=None):
     # Plot observed data
     ax.scatter(
         df.index,
-        df["value"],
+        1000 * df["value"],
         facecolors="none",
         edgecolors="steelblue",
         label="observed",
         linewidths=2,
     )
-    ax.scatter(
+    # Plot fitted line
+    ax.plot(
         df.index,
-        predictions,
-        facecolors="black",
-        edgecolors="black",
+        1000 * predictions["predicted"],
         label="model prediction",
-        linewidths=2,
-    )
-    ax.fill_between(
-        df.index,
-        1000 * predictions["ci_lower"],
-        1000 * predictions["ci_upper"],
         color="k",
-        alpha=0.05,
     )
 
-    # Plot counterfactual mean rate with 95% cis
+    # Plot counterfactual mean rate
     ax.plot(
         df[STEP_TIME_1:].index,
-        cf[STEP_TIME_1:],
+        1000 * cf[STEP_TIME_1:]["predicted"],
         "r--",
         label="No COVID-19 counterfactual",
-    )
-    ax.fill_between(
-        df[STEP_TIME_1:].index,
-        1000 * cf["ci_lower"][STEP_TIME_1:],
-        1000 * cf["ci_upper"][STEP_TIME_1:],
-        color="r",
-        alpha=0.05,
     )
 
     # Plot line marking intervention
     ax.axvline(x=STEP_TIME_1, label="March 2020")
-    ax.axvline(x=STEP_TIME_2, label="recovery")
+    ax.axvline(x=STEP_TIME_2, label="recovery", color="green")
     ax.legend(loc="best")
     plt.xlabel("Months")
     plt.ylabel("Rate per 1,000")
@@ -989,10 +973,10 @@ def table_any_new(measure_table):
     model_new, _ = get_model(
         measure_table, "antidepressant_any_new_all_total_rate"
     )
-    all_coef = translate_to_ci(model_all, "All prescribing")
-    new_coef = translate_to_ci(model_new, "New prescribing")
+    all_coef = translate_to_ci(get_ci_df(model_all), "All prescribing")
+    new_coef = translate_to_ci(get_ci_df(model_new), "New prescribing")
     table2 = pandas.concat([all_coef, new_coef])
-    dfi.export(table2, "table2.png")
+    table2.to_csv("table2.csv")
 
 
 def plot_all_cf(measure_table):
@@ -1001,7 +985,7 @@ def plot_all_cf(measure_table):
     model_all, all_data = get_model(
         measure_table, "antidepressant_any_all_total_rate"
     )
-    ax = plot_cf(
+    plot_cf(
         fig,
         (2, 1, 1),
         model_all,
@@ -1017,7 +1001,6 @@ def plot_all_cf(measure_table):
         (2, 1, 2),
         model_all_new,
         all_data_new,
-        other_ax=ax,
         title="New Antidepressant",
     )
     plt.savefig("cf.png")
@@ -1211,13 +1194,16 @@ def main():
         )
     ].reset_index(drop=True)
 
-    plot_all_rr(measure_table)
     # figure_1(measure_table)
-    # table_any_new(measure_table)
     # forest(measure_table)
+
     # forest_any(measure_table)
     # forest_autism(measure_table)
     # forest_ld(measure_table)
+
+    # plot_all_cf(measure_table)
+    # plot_all_rr(measure_table)
+    # table_any_new(measure_table)
 
 
 if __name__ == "__main__":
