@@ -18,6 +18,7 @@ demographics = [
     "learning_disability",
     "imd",
     "ethnicity",
+    "ethnicity16",
 ]
 
 # Subgroups for LDA population plots
