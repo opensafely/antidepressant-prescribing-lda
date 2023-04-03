@@ -15,6 +15,70 @@ def _check_for_practice(table):
         )
 
 
+def _round_column(column, base=10):
+    """
+    Rounds values to nearest multiple of base.
+    Args:
+        x: Value to round
+        base: Base to round to
+        Returns:
+            Rounded value
+    """
+    return (column / base).round() * base
+
+
+def _suppress_column(
+    column, data, small_number_threshold=5, redact_zeroes=False
+):
+    small_value_filter = (data[column] > 0) & (
+        data[column] <= small_number_threshold
+    )
+    large_value_filter = data[column] > small_number_threshold
+
+    num_small_values = data.loc[small_value_filter, column].count()
+    num_large_values = data.loc[large_value_filter, column].count()
+
+    # Redact zeroes before any return
+    if redact_zeroes:
+        data.loc[data[column] == 0, column] = numpy.nan
+
+    if num_small_values == 0:
+        return
+
+    small_value_total = data.loc[small_value_filter, column].sum()
+    data.loc[small_value_filter, column] = numpy.nan
+
+    if small_value_total > small_number_threshold:
+        return
+    if num_large_values == 0:
+        return
+
+    # If the total suppressed is small then reidentification may
+    # be possible by comparing the total of the unsuppressed
+    # values with the population. So we suppress further values to
+    # take the total over the threshold. If there are multiple
+    # rows with the next smallest value, it may be possible to
+    # change the query to reorder the rows and thus reveal their
+    # values; so we suppress all of them.
+    next_smallest_value = data.loc[large_value_filter, column].min()
+    all_next_smallest = data[column] == next_smallest_value
+    data.loc[all_next_smallest, column] = numpy.nan
+
+
+def redact_df(measure_table, redact_zeroes=False):
+    _suppress_column("numerator", measure_table, redact_zeroes=redact_zeroes)
+    _suppress_column("denominator", measure_table, redact_zeroes=redact_zeroes)
+
+
+def round_df(measure_table, base=10):
+    measure_table.numerator = _round_column(measure_table.numerator, base=base)
+    measure_table.denominator = _round_column(
+        measure_table.denominator, base=base
+    )
+    measure_table.value = measure_table.numerator / measure_table.denominator
+    return measure_table
+
+
 def _reshape_data(measure_table):
     if measure_table.date[0] != measure_table.date[1]:
         # if sequential rows have different dates, then an individual date's
@@ -43,7 +107,7 @@ def _reshape_data(measure_table):
 
     else:
         # No denominator, just a count
-        # NOTE: denominator reconstruction may not work if there is redaction
+        # NOTE: denominator reconstruction may not work if already redacted
         if "count" in measure_table.attrs["id"]:
             name = measure_table.attrs["id"]
             copy = measure_table.copy()
@@ -97,33 +161,6 @@ def get_measure_tables(input_files):
             measure_table = pandas.read_csv(input_file, parse_dates=["date"])
             measure_table.attrs["id"] = measure_fname_match.group("id")
             yield measure_table
-
-
-def _round_table(measure_table, round_to):
-    def custom_round(x, base):
-        return int(base * round(float(x) / base))
-
-    measure_table.numerator = measure_table.numerator.apply(
-        lambda x: custom_round(x, round_to) if pandas.notnull(x) else x
-    )
-    measure_table.denominator = measure_table.denominator.apply(
-        lambda x: custom_round(x, round_to) if pandas.notnull(x) else x
-    )
-    # recompute value
-    measure_table.value = measure_table.numerator / measure_table.denominator
-    return measure_table
-
-
-def _redact_zeroes(measure_table):
-    """
-    The measures framework does not redact zeroes
-    Not compulsory, but better to include in redaction
-    A group could have the name 0, so apply to specific columns
-    The value column is recomputed, so we can skip
-    """
-    measure_table.numerator = measure_table.numerator.replace(0, numpy.nan)
-    measure_table.denominator = measure_table.denominator.replace(0, numpy.nan)
-    return measure_table
 
 
 def _redacted_string(measure_table):
@@ -193,6 +230,21 @@ def parse_args():
         help="Name for joined measures file",
     )
     parser.add_argument(
+        "--skip-redaction",
+        action="store_true",
+        help="Do not redact numbers below 5",
+    )
+    parser.add_argument(
+        "--skip-round",
+        action="store_true",
+        help="Do not round numbers",
+    )
+    parser.add_argument(
+        "--keep-zeroes",
+        action="store_true",
+        help="Do not redact zeroes",
+    )
+    parser.add_argument(
         "--round-to",
         required=False,
         default=10,
@@ -208,6 +260,9 @@ def main():
     input_list = args.input_list
     output_dir = args.output_dir
     output_name = args.output_name
+    skip_redaction = args.skip_redaction
+    skip_round = args.skip_round
+    keep_zeroes = args.keep_zeroes
     round_to = args.round_to
 
     if not input_files and not input_list:
@@ -216,9 +271,11 @@ def main():
     tables = []
     for measure_table in get_measure_tables(input_list or input_files):
         table = _reshape_data(measure_table)
-        no_zeroes = _redact_zeroes(table)
-        rounded = _round_table(no_zeroes, round_to)
-        redacted_str = _redacted_string(rounded)
+        if not skip_redaction:
+            redact_df(table, redact_zeroes=(not keep_zeroes))
+        if not skip_round:
+            table = round_df(table, base=round_to)
+        redacted_str = _redacted_string(table)
         tables.append(redacted_str)
 
     output = _join_tables(tables)
