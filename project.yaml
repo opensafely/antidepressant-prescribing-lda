@@ -62,7 +62,7 @@ actions:
         cohort: output/lda/codelist_update/input_lda_2021*.csv.gz
 
   generate_study_population_lda_2022:
-    run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2022-01-01 to 2022-11-01 by month" --output-format=csv.gz --output-dir output/lda/codelist_update
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_lda --index-date-range "2022-01-01 to 2022-12-01 by month" --output-format=csv.gz --output-dir output/lda/codelist_update
     outputs:
       highly_sensitive:
         cohort: output/lda/codelist_update/input_lda_2022*.csv.gz
@@ -108,7 +108,7 @@ actions:
   ###################
   join_cohorts_lda:
     run: >
-      cohort-joiner:v0.0.18
+      cohort-joiner:v0.0.56
         --lhs output/lda/codelist_update/input_*.csv.gz
         --rhs output/input_ethnicity.csv.gz
         --output-dir output/lda/codelist_update/joined
