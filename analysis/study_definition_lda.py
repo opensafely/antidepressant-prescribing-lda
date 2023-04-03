@@ -209,42 +209,42 @@ measures = [
         numerator="antidepressant_any_18",
         denominator="depression_list_type",
         group_by=["diagnosis"],
-        small_number_suppression=True,
+        small_number_suppression=False,
     ),
     Measure(
         id="antidepressant_any_new_all_breakdown_diagnosis_18+_rate",
         numerator="antidepressant_any_new_18",
         denominator="antidepressant_any_naive_18",
         group_by=["diagnosis"],
-        small_number_suppression=True,
+        small_number_suppression=False,
     ),
     Measure(
         id="depression_all_total_rate",
         numerator="depression_register",
         denominator="depression_list_type",
         group_by="population",
-        small_number_suppression=True,
+        small_number_suppression=False,
     ),
     Measure(
         id="antidepressant_any_all_total_rate",
         numerator="antidepressant_any",
         denominator="population",
         group_by="population",
-        small_number_suppression=True,
+        small_number_suppression=False,
     ),
     Measure(
         id="antidepressant_any_new_all_total_rate",
         numerator="antidepressant_any_new",
         denominator="antidepressant_any_naive",
         group_by="population",
-        small_number_suppression=True,
+        small_number_suppression=False,
     ),
     Measure(
-        id="antidepressant_any_breakdown_type_count",
+        id="antidepressant_any_all_breakdown_prescription_count",
         numerator="antidepressant_any",
         denominator="antidepressant_any",
         group_by=["prescription"],
-        small_number_suppression=True,
+        small_number_suppression=False,
     ),
 ]
 for group in lda_subgroups:
@@ -253,7 +253,7 @@ for group in lda_subgroups:
         numerator="antidepressant_any_18",
         denominator="depression_list_type",
         group_by=[group, "diagnosis"],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(m)
     m = Measure(
@@ -261,7 +261,7 @@ for group in lda_subgroups:
         numerator="antidepressant_any_new_18",
         denominator="antidepressant_any_naive_18",
         group_by=[group, "diagnosis"],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(m)
     m = Measure(
@@ -269,7 +269,7 @@ for group in lda_subgroups:
         numerator="depression_register",
         denominator="depression_list_type",
         group_by=[group],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(m)
     m = Measure(
@@ -277,7 +277,7 @@ for group in lda_subgroups:
         numerator="antidepressant_any",
         denominator="population",
         group_by=[group],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(m)
     new_m = Measure(
@@ -285,15 +285,15 @@ for group in lda_subgroups:
         numerator="antidepressant_any_new",
         denominator="antidepressant_any_naive",
         group_by=[group],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(new_m)
     m = Measure(
-        id=f"antidepressant_any_{group}_breakdown_type_count",
+        id=f"antidepressant_any_{group}_breakdown_prescription_count",
         numerator="antidepressant_any",
         denominator="antidepressant_any",
         group_by=[group, "prescription"],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(m)
 
@@ -307,7 +307,7 @@ for d in breakdown_list:
         numerator="antidepressant_any",
         denominator="population",
         group_by=[d],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(m)
     m = Measure(
@@ -315,7 +315,7 @@ for d in breakdown_list:
         numerator="antidepressant_any_new",
         denominator="antidepressant_any_naive",
         group_by=[d],
-        small_number_suppression=True,
+        small_number_suppression=False,
     )
     measures.append(m)
     for group in lda_subgroups:
@@ -324,7 +324,7 @@ for d in breakdown_list:
             numerator="antidepressant_any",
             denominator="population",
             group_by=[group, d],
-            small_number_suppression=True,
+            small_number_suppression=False,
         )
         measures.append(m)
         m = Measure(
@@ -332,6 +332,6 @@ for d in breakdown_list:
             numerator="antidepressant_any_new",
             denominator="antidepressant_any_naive",
             group_by=[group, d],
-            small_number_suppression=True,
+            small_number_suppression=False,
         )
         measures.append(m)
