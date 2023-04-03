@@ -94,7 +94,7 @@ def is_date_as_obj(series):
 
 def is_category(series):
     """Series with 10 or fewer levels"""
-    return len(series.unique()) <= 10
+    return len(series.unique()) <= 20
 
 
 def parse_os_year(series):
@@ -263,9 +263,12 @@ def main():
         input_dataframe = read_dataframe(input_file)
         table_summary = get_table_summary(input_dataframe)
         column_summaries = get_column_summaries(input_dataframe)
-        impossible_early, impossible_date = count_impossible_dates(
-            input_dataframe, year
-        )
+        dates_tuple = count_impossible_dates(input_dataframe, year)
+        if dates_tuple:
+            impossible_early, impossible_date = dates_tuple
+        else:
+            impossible_early = None
+            impossible_date = None
 
         output_file = output_dir / f"{get_name(input_file)}.html"
         dataset_report = get_dataset_report(
