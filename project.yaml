@@ -108,7 +108,7 @@ actions:
   ###################
   join_cohorts_lda:
     run: >
-      cohort-joiner:v0.0.18
+      cohort-joiner:v0.0.56
         --lhs output/lda/codelist_update/input_*.csv.gz
         --rhs output/input_ethnicity.csv.gz
         --output-dir output/lda/codelist_update/joined
