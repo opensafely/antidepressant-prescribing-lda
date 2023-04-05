@@ -259,6 +259,7 @@ actions:
             --measures-pattern "antidepressant_any_all_breakdown_*_rate"
             --measures-pattern "antidepressant_any_autism_breakdown_*_rate"
             --measures-pattern "antidepressant_any_learning_disability_breakdown_*_rate"
+            --include-denominator
             --column-names "all" "learning_disability" "autism"
             --output-name "table1.html"
     needs: [join_measures_lda]
@@ -266,12 +267,28 @@ actions:
       moderately_sensitive:
         cohort: output/lda/codelist_update/joined/summary/table1.html
 
+  generate_prescription_table:
+    run: >
+            python:latest python analysis/table1.py
+            --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
+            --output-dir output/lda/codelist_update/joined/summary
+            --measures-pattern "antidepressant_any_all_breakdown_prescription_count"
+            --measures-pattern "antidepressant_any_autism_breakdown_prescription_count"
+            --measures-pattern "antidepressant_any_learning_disability_breakdown_prescription_count"
+            --column-names "all" "learning_disability" "autism"
+            --output-name "prescription.html"
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/codelist_update/joined/summary/prescription.html
+
   generate_table1_new:
     run: >
             python:latest python analysis/table1.py
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
             --output-dir output/lda/codelist_update/joined/summary
             --measures-pattern "antidepressant_any_new_*_breakdown_*_rate"
+            --include-denominator
             --column-names "all" "learning_disability" "autism"
             --output-name "table1_new.html"
     needs: [join_measures_lda]

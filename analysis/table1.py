@@ -90,29 +90,36 @@ def flatten(df):
 
 def transform_percentage(x):
     transformed = (
-        x.astype(str)
+        x.map("{:.0f}".format)
         + " ("
-        + (((x / x.sum()) * 100).round(0)).astype(str)
+        + (((x / x.sum()) * 100).round(1)).astype(str)
         + ")"
     )
     transformed.name = f"{x.name} (%)"
     return transformed
 
 
-def get_percentages(df):
+def get_percentages(df, include_denominator):
     """
     Create a new column which has count (%) of group
-    After computation is complete, replace nan with "REDACTED" again
+    After computation is complete reconvert numeric to string and replace
+    nan with "REDACTED" again
     """
+    rate = (1000 * df.numerator / df.denominator).round(1).astype(str)
+    rate = rate.replace("nan", "[REDACTED]")
+
     percent = df.groupby(level=0).transform(transform_percentage)
-    percent.numerator = percent.numerator.replace("nan (nan)", "[REDACTED]")
-    percent.denominator = percent.denominator.replace(
-        "nan (nan)", "[REDACTED]"
-    )
+    percent = percent.replace("nan (nan)", "[REDACTED]")
+
+    if include_denominator:
+        percent["rate"] = rate
+    else:
+        percent = percent.drop("denominator", axis=1)
     percent = percent.rename(
         columns={
             "numerator": "No. prescribed antidepressant (%)",
             "denominator": "No. registered patients (%)",
+            "rate": "Rate per 1,000",
         }
     )
     return percent
@@ -169,6 +176,11 @@ def parse_args():
         required=True,
         help="Name for panel plot",
     )
+    parser.add_argument(
+        "--include-denominator",
+        action="store_true",
+        help="Include denominator (%) and rate",
+    )
     return parser.parse_args()
 
 
@@ -179,6 +191,7 @@ def main():
     output_dir = args.output_dir
     output_name = args.output_name
     columns = args.column_names
+    include_denominator = args.include_denominator
 
     measure_table = get_measure_tables(input_file)
     subset = subset_table(measure_table, measures_pattern, start_date)
@@ -189,11 +202,13 @@ def main():
         sub = flatten(sub)
         sub = sub.set_index(["category", "group"])
         sub = sub[["numerator", "denominator"]]
+        # Dataframe must be numeric to compute percentages
         sub = sub.apply(pandas.to_numeric, errors="coerce")
+        # NOTE: may not be true total, could pull from total measure
         overall = sub.loc[sub.iloc[0].name[0]].sum()
         overall.name = ("Total", "")
         sub = pandas.concat([pandas.DataFrame(overall).T, sub])
-        sub = get_percentages(sub)
+        sub = get_percentages(sub, include_denominator)
         sub.columns = pandas.MultiIndex.from_product(
             [[f"{column.title()}"], sub.columns]
         )
