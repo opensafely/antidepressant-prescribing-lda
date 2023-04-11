@@ -22,12 +22,12 @@ def _suppress_column(column, small_number_threshold=5, redact_zeroes=False):
     num_small_values = small_value_filter.sum()
     num_large_values = large_value_filter.sum()
 
-    # Redact zeroes before any return
-    if redact_zeroes:
-        column.loc[column == 0] = numpy.nan
-
     if num_small_values == 0:
         return column
+
+    # Redact true zeroes only if there are small values
+    if redact_zeroes:
+        column.loc[column == 0] = numpy.nan
 
     small_value_total = column.loc[small_value_filter].sum()
     column.loc[small_value_filter] = numpy.nan

@@ -49,13 +49,13 @@ def test_suppress_6_and_zeroes(test_series):
     assert not (test_series <= 6).any()
 
 
-def test_suppress_only_zeroes(test_series):
+def test_suppress_keep_some_zeroes(test_series):
     """
-    Check that zeroes get redacted even if there is no other redaction
+    Check that zeroes are retained if there is no other redaction
     """
     test_series.loc[1] = 9
     _suppress_column(test_series, redact_zeroes=True)
-    assert not (test_series <= 5).any()
+    assert test_series.loc[0] == 0
 
 
 def test_round_df(test_df):
