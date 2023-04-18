@@ -7,13 +7,13 @@ import scipy
 
 import matplotlib.pyplot as plt
 import dataframe_image as dfi
+from pandas.api.types import is_numeric_dtype
 
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from statsmodels.tsa.deterministic import Fourier
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
-plt.style.use("seaborn-whitegrid")
 
 STEP_TIME_1 = pandas.to_datetime("2020-03-01")
 STEP_TIME_2 = pandas.to_datetime("2021-03-01")
@@ -268,10 +268,10 @@ def plot(
     return ax
 
 
-def get_ci_df(model, round_to=2):
+def get_ci_df(model):
     """
     Takes a model and returns a dataframe with the coefficient, confidence
-    intervals, error bar, and coef (95% CI) as a string
+    intervals, and error bar
 
     """
     coef = model.params
@@ -279,16 +279,32 @@ def get_ci_df(model, round_to=2):
     cis = model.conf_int().rename(columns={0: "lci", 1: "uci"})
     df = pandas.concat([coef, cis], axis=1)
     df["error"] = df.coef - df.lci
-    df = 100 * (numpy.exp(df) - 1)
-    pcnt = (
-        round(df.coef, round_to).astype(str)
-        + "% ("
-        + round(df.lci, round_to).astype(str)
-        + "% to "
-        + round(df.uci, round_to).astype(str)
-        + "%)"
-    )
-    df["pcnt"] = pcnt
+    return df
+
+
+def get_ci_label(df, round_to=2, pcnt=True):
+    if pcnt:
+        df = df.apply(
+            lambda x: 100 * (numpy.exp(x) - 1) if is_numeric_dtype(x) else x,
+            axis=0,
+        )
+        label = df.apply(
+            lambda x: f"{x.coef:.2f}% ({x.lci:.2f}% to {x.uci:.2f})%"
+            if x.coef != 0
+            else f"{'-': <15}",
+            axis=1,
+        )
+    else:
+        df = df.apply(
+            lambda x: numpy.exp(x) if is_numeric_dtype(x) else x, axis=0
+        )
+        label = df.apply(
+            lambda x: f"{x.coef:.2f} ({x.lci:.2f} to {x.uci:.2f})"
+            if x.coef != 1
+            else f"{'Ref': <27}",
+            axis=1,
+        )
+    df["label"] = label
     return df
 
 
@@ -326,25 +342,38 @@ def pcnt_change(
     df.index = pandas.MultiIndex.from_tuples(
         indices, names=["change", "group"]
     )
+
+    # Manually make the reference group
+    # As statsmodels does not include it
+    first = df.index.get_level_values(1)[0]
+    ref = df[df.index.isin([first], level=1)].copy()
+    ref[["coef", "lci", "uci", "error"]] = 0
+    ref = ref.reset_index()
+    ref["group"] = reference
+    ref = ref.set_index(["change", "group"])
+
+    df = pandas.concat([df, ref])
     return df
 
 
-def group_forest(df, columns):
+def group_forest(df, columns, as_rr=[]):
     """
     Create a forest plot with a column for each study period, and a row for
     each subgroup.
 
     """
     mapping = {
-        "baseline": "Study Period\nBaseline Difference",
+        "baseline": "Baseline Relative Risk",
         "slope": "Lockdown vs. Pre-COVID\nSlope change",
         "slope2": "Recovery vs. Lockdown\nSlope change",
         "step": "Lockdown\nLevel shift",
         "step2": "Recovery\nLevel shift",
     }
 
-    df = df[df.index.isin(columns, level=0)]
+    rr = get_ci_label(df[df.index.isin(as_rr, level=0)], pcnt=False)
+    pcnt = get_ci_label(df[df.index.isin(columns, level=0)])
 
+    df = pandas.concat([rr, pcnt])
     rows = (
         df.loc[df.index.get_level_values(0)[0]]
         .groupby(["category"])
@@ -362,6 +391,12 @@ def group_forest(df, columns):
     grouped = df.groupby(["category", "change"])
     for i, (key, ax) in enumerate(zip(grouped.groups.keys(), axes.flatten())):
         grp = grouped.get_group(key)
+        if key[1] in as_rr:
+            x_label = "Relative Risk (95% CI)"
+            ax_line = 1
+        else:
+            x_label = "Percent Change (95% CI)"
+            ax_line = 0
         if "slope" in key[1]:
             color = "tab:blue"
         elif "step" in key[1]:
@@ -372,13 +407,13 @@ def group_forest(df, columns):
             ax.set_ylabel(key[0])
             y_ticks = [
                 "   ".join(x)
-                for x in list(zip(grp.index.get_level_values(1), grp.pcnt))
+                for x in list(zip(grp.index.get_level_values(1), grp.label))
             ]
         else:
-            y_ticks = grp.pcnt.to_list()
+            y_ticks = grp.label.to_list()
         ax.errorbar(
             x=grp.coef.values,
-            y=y_ticks,
+            y=list(range(len(y_ticks))),
             xerr=(grp.coef - grp.lci, grp.uci - grp.coef),
             color=color,
             capsize=3,
@@ -389,12 +424,13 @@ def group_forest(df, columns):
             mfc=color,
             mec=color,
         )
+        ax.set_yticks(list(range(len(y_ticks))), y_ticks)
         if i < ncols:
             ax.set_title(
                 mapping[key[1]], loc="center", fontsize=12, fontweight="bold"
             )
-        ax.axvline(x=0, linewidth=0.8, linestyle="--", color="black")
-    fig.supxlabel("Percent Change (95% CI)", fontsize=12)
+        ax.axvline(x=ax_line, linewidth=0.8, linestyle="--", color="black")
+        ax.set_xlabel(x_label, fontsize=8)
     plt.tight_layout()
     return fig
 
@@ -403,7 +439,7 @@ def translate_to_ci(model, name):
     """
     Create a table from the confidence interval dataframe
     """
-    df = get_ci_df(model)
+    df = get_ci_label(model)
     mapping = {
         "time": ("", "Pre-COVID-19 monthly slope (95% CI)"),
         "mar20": ("", "March 2020 (95% CI)"),
@@ -415,7 +451,7 @@ def translate_to_ci(model, name):
     }
     df = df.loc[mapping.keys()]
     df = df.set_index(pandas.MultiIndex.from_tuples(mapping.values()))
-    row = df.pcnt
+    row = df.label
     row.name = name
     return pandas.DataFrame(row).transpose()
 
@@ -693,7 +729,7 @@ def forest(measure_table):
     new = new.set_index(["change", "group"])
     df = pandas.concat([model_aut, model_ld, new])
 
-    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["slope", "slope2", "step", "step2"], as_rr=["baseline"])
     plt.savefig("figure_2.png")
 
 
@@ -761,7 +797,7 @@ def forest_any(measure_table):
         ]
     )
 
-    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["slope", "slope2", "step", "step2"], as_rr=["baseline"])
     plt.savefig("figure_3.png")
 
 
@@ -835,7 +871,7 @@ def forest_autism(measure_table):
         ]
     )
 
-    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["slope", "slope2", "step", "step2"], as_rr=["baseline"])
     plt.savefig("aut_breakdown.png")
 
 
@@ -909,7 +945,7 @@ def forest_ld(measure_table):
         ]
     )
 
-    group_forest(df, ["baseline", "slope", "slope2", "step", "step2"])
+    group_forest(df, ["slope", "slope2", "step", "step2"], as_rr=["baseline"])
     plt.savefig("ld_breakdown.png")
 
 
