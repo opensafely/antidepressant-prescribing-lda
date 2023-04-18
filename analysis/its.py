@@ -742,6 +742,12 @@ def forest_any(measure_table):
         interaction_group="group_0",
         reference="Depression register",
     )
+    model_prescription = pcnt_change(
+        measure_table,
+        "antidepressant_any_all_breakdown_prescription_count",
+        interaction_group="group_0",
+        reference="ssri",
+    )
     df = pandas.concat(
         [
             model_age,
@@ -751,6 +757,7 @@ def forest_any(measure_table):
             model_region,
             model_sex,
             model_diagnosis,
+            model_prescription,
         ]
     )
 
@@ -809,6 +816,12 @@ def forest_autism(measure_table):
         reference="Depression register",
         convert_flat=True,
     )
+    model_prescription = pcnt_change(
+        measure_table,
+        "antidepressant_any_autism_breakdown_prescription_count",
+        interaction_group="group_1",
+        reference="ssri",
+    )
     df = pandas.concat(
         [
             model_age,
@@ -818,6 +831,7 @@ def forest_autism(measure_table):
             # model_region,
             model_sex,
             model_diagnosis,
+            model_prescription,
         ]
     )
 
@@ -876,6 +890,12 @@ def forest_ld(measure_table):
         reference="Depression register",
         convert_flat=True,
     )
+    model_prescription = pcnt_change(
+        measure_table,
+        "antidepressant_any_learning_disability_breakdown_prescription_count",
+        interaction_group="group_1",
+        reference="ssri",
+    )
     df = pandas.concat(
         [
             model_age,
@@ -885,6 +905,7 @@ def forest_ld(measure_table):
             model_region,
             model_sex,
             model_diagnosis,
+            model_prescription,
         ]
     )
 
@@ -1042,210 +1063,23 @@ def plot_any_breakdowns(measure_table):
         # other_ax=ax,
         title="Sex",
     )
+    model_prescription, prescription_data = get_model(
+        measure_table,
+        "antidepressant_any_all_breakdown_prescription_count",
+        interaction_group="group_0",
+        reference="ssri",
+    )
+    plot(
+        fig,
+        (4, 2, 8),
+        model_prescription,
+        prescription_data,
+        interaction_group="group_0",
+        # other_ax=ax,
+        title="Prescription",
+    )
 
     plt.savefig("any_breakdown.png")
-
-
-def plot_autism_antidepressant_type(measure_table):
-    fig = plt.figure(figsize=(16, 8), dpi=150)
-
-    # All
-    model_ssri, ssri_data = get_model(
-        measure_table,
-        "antidepressant_ssri_autism_total_rate",
-        reference="No recorded autism",
-        interaction_group="group_0",
-    )
-    ax = plot(
-        fig,
-        (3, 2, 1),
-        model_ssri,
-        ssri_data,
-        interaction_group="group_0",
-        title="SSRI Prescribing",
-    )
-    model_tricyclic, tricyclic_data = get_model(
-        measure_table,
-        "antidepressant_tricyclic_autism_total_rate",
-        interaction_group="group_0",
-        reference="No recorded autism",
-    )
-    plot(
-        fig,
-        (3, 2, 3),
-        model_tricyclic,
-        tricyclic_data,
-        interaction_group="group_0",
-        other_ax=ax,
-        title="Tricyclic Prescribing",
-        ylabel="Rate per 1,000 registered patients",
-    )
-    model_other, other_data = get_model(
-        measure_table,
-        "antidepressant_other_autism_total_rate",
-        interaction_group="group_0",
-        reference="No recorded autism",
-    )
-    plot(
-        fig,
-        (3, 2, 5),
-        model_other,
-        other_data,
-        interaction_group="group_0",
-        other_ax=ax,
-        title="Other Prescribing",
-    )
-
-    # New
-    model_new_ssri, ssri_new_data = get_model(
-        measure_table,
-        "antidepressant_ssri_new_autism_total_rate",
-        interaction_group="group_0",
-        reference="No recorded autism",
-    )
-    ax_new, _ = plot(
-        fig,
-        (3, 2, 2),
-        model_new_ssri,
-        ssri_new_data,
-        interaction_group="group_0",
-        title="New SSRI Prescribing",
-    )
-    model_new_tricyclic, tricyclic_new_data = get_model(
-        measure_table,
-        "antidepressant_tricyclic_new_autism_total_rate",
-        interaction_group="group_0",
-        reference="No recorded autism",
-    )
-    plot(
-        fig,
-        (3, 2, 4),
-        model_new_tricyclic,
-        tricyclic_new_data,
-        interaction_group="group_0",
-        other_ax=ax_new,
-        title="New Tricyclic Prescribing",
-        ylabel="Rate per 1,000 antidepressant naive patients",
-    )
-    model_other_new, other_new_data = get_model(
-        measure_table,
-        "antidepressant_other_new_autism_total_rate",
-        interaction_group="group_0",
-        reference="No recorded autism",
-    )
-    plot(
-        fig,
-        (3, 2, 6),
-        model_other_new,
-        other_new_data,
-        interaction_group="group_0",
-        title="New Other Prescribing",
-        other_ax=ax_new,
-    )
-
-    plt.tight_layout()
-    plt.savefig("autism_type.png")
-
-
-def plot_ld_antidepressant_subtype(measure_table):
-    fig = plt.figure(figsize=(16, 8), dpi=150)
-
-    # All
-    model_ssri, ssri_data = get_model(
-        measure_table,
-        "antidepressant_ssri_learning_disability_total_rate",
-        reference="No recorded learning_disability",
-        interaction_group="group_0",
-    )
-    ax = plot(
-        fig,
-        (3, 2, 1),
-        model_ssri,
-        ssri_data,
-        interaction_group="group_0",
-        title="SSRI Prescribing",
-    )
-    model_tricyclic, tricyclic_data = get_model(
-        measure_table,
-        "antidepressant_tricyclic_learning_disability_total_rate",
-        interaction_group="group_0",
-        reference="No recorded learning_disability",
-    )
-    plot(
-        fig,
-        (3, 2, 3),
-        model_tricyclic,
-        tricyclic_data,
-        interaction_group="group_0",
-        other_ax=ax,
-        title="Tricyclic Prescribing",
-        ylabel="Rate per 1,000 registered patients",
-    )
-    model_other, other_data = get_model(
-        measure_table,
-        "antidepressant_other_learning_disability_total_rate",
-        interaction_group="group_0",
-        reference="No recorded learning_disability",
-    )
-    plot(
-        fig,
-        (3, 2, 5),
-        model_other,
-        other_data,
-        interaction_group="group_0",
-        other_ax=ax,
-        title="Other Prescribing",
-    )
-
-    # New
-    model_new_ssri, ssri_new_data = get_model(
-        measure_table,
-        "antidepressant_ssri_new_learning_disability_total_rate",
-        interaction_group="group_0",
-        reference="No recorded learning_disability",
-    )
-    ax_new, _ = plot(
-        fig,
-        (3, 2, 2),
-        model_new_ssri,
-        ssri_new_data,
-        interaction_group="group_0",
-        title="New SSRI Prescribing",
-    )
-    model_new_tricyclic, tricyclic_new_data = get_model(
-        measure_table,
-        "antidepressant_tricyclic_new_learning_disability_total_rate",
-        interaction_group="group_0",
-        reference="No recorded learning_disability",
-    )
-    plot(
-        fig,
-        (3, 2, 4),
-        model_new_tricyclic,
-        tricyclic_new_data,
-        interaction_group="group_0",
-        other_ax=ax_new,
-        title="New Tricyclic Prescribing",
-        ylabel="Rate per 1,000 antidepressant naive patients",
-    )
-    model_other_new, other_new_data = get_model(
-        measure_table,
-        "antidepressant_other_new_learning_disability_total_rate",
-        interaction_group="group_0",
-        reference="No recorded learning_disability",
-    )
-    plot(
-        fig,
-        (3, 2, 6),
-        model_other_new,
-        other_new_data,
-        interaction_group="group_0",
-        title="New Other Prescribing",
-        other_ax=ax_new,
-    )
-
-    plt.tight_layout()
-    plt.savefig("learning_disability_type.png")
 
 
 def parse_args():
@@ -1270,10 +1104,17 @@ def main():
     output_dir = args.output_dir
 
     measure_table = get_measure_tables(input_file)
-    model_all, its_data = get_model(
-        measure_table, "antidepressant_any_new_all_total_rate"
-    )
-    # plot_all_cf(measure_table)
+    # There are no prescription "Unknown", so remove
+    measure_table = measure_table[
+        ~(
+            measure_table["name"].str.contains("prescription")
+            & (
+                (measure_table["group_0"] == "Unknown")
+                | (measure_table["group_1"] == "Unknown")
+            )
+        )
+    ].reset_index(drop=True)
+
     # figure_1(measure_table)
     # table_any_new(measure_table)
     # forest(measure_table)
