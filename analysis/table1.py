@@ -177,6 +177,11 @@ def parse_args():
         help="Name for panel plot",
     )
     parser.add_argument(
+        "--exclude-missing",
+        action="store_true",
+        help="Exclude the missing category",
+    )
+    parser.add_argument(
         "--include-denominator",
         action="store_true",
         help="Include denominator (%) and rate",
@@ -191,6 +196,7 @@ def main():
     output_dir = args.output_dir
     output_name = args.output_name
     columns = args.column_names
+    exclude_missing = args.exclude_missing
     include_denominator = args.include_denominator
 
     measure_table = get_measure_tables(input_file)
@@ -218,6 +224,8 @@ def main():
             table1 = table1.join(sub)
 
     table1 = title_multiindex(table1)
+    if exclude_missing:
+        table1 = table1[table1.index.get_level_values(1) != "Missing"]
     table1.to_html(output_dir / output_name, index=True)
 
 

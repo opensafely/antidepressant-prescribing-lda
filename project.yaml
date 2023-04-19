@@ -277,6 +277,7 @@ actions:
             --measures-pattern "antidepressant_any_learning_disability_breakdown_prescription_count"
             --column-names "all" "learning_disability" "autism"
             --output-name "prescription.html"
+            --exclude-missing
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
