@@ -334,3 +334,39 @@ actions:
     outputs:
       moderately_sensitive:
         cohort: output/lda/codelist_update/joined/summary/table1_new.html
+
+  generate_median_table_all:
+    run: >
+            python:latest python analysis/median_table.py
+            --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
+            --output-dir output/lda/codelist_update/joined/summary/
+            --measures-list "antidepressant_any_all_breakdown_age_band_rate"
+            --measures-list "antidepressant_any_all_breakdown_sex_rate"
+            --measures-list "antidepressant_any_all_breakdown_region_rate"
+            --measures-list "antidepressant_any_all_breakdown_diagnosis_rate"
+            --measures-list "antidepressant_any_all_breakdown_carehome_rate"
+            --measures-list "antidepressant_any_all_breakdown_ethnicity_rate"
+            --measures-list "antidepressant_any_all_breakdown_imd_rate"
+            --output-name "median_table.html"
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/codelist_update/joined/summary/median_table.html
+
+  generate_median_table_ld:
+    run: >
+            python:latest python analysis/median_table.py
+            --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
+            --output-dir output/lda/codelist_update/joined/summary/
+            --measures-list "antidepressant_any_learning_disability_breakdown_age_band_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_sex_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_region_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_diagnosis_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_carehome_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_ethnicity_rate"
+            --measures-list "antidepressant_any_learning_disability_breakdown_imd_rate"
+            --output-name "median_table_ld.html"
+    needs: [join_measures_lda]
+    outputs:
+      moderately_sensitive:
+        cohort: output/lda/codelist_update/joined/summary/median_table_ld.html
