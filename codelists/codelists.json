@@ -2,93 +2,93 @@
   "files": {
     "nhsd-primary-care-domain-refsets-ld_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/ld_cod/20210127",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/ld_cod/20210127/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/ld_cod/20210127/",
       "downloaded_at": "2022-01-28 12:03:04.319091Z",
       "sha": "0c5bc3b050a55c2090e16932fd7364a0be775cb4"
     },
     "nhsd-primary-care-domain-refsets-autism_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/autism_cod/20210127",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/autism_cod/20210127/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/autism_cod/20210127/",
       "downloaded_at": "2022-01-28 12:03:04.648927Z",
       "sha": "5e1a00fd89401955f0ebd09af105cf9748dbcc73"
     },
     "nhsd-primary-care-domain-refsets-carehome_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/carehome_cod/5d2f363a",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/carehome_cod/5d2f363a/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/carehome_cod/5d2f363a/",
       "downloaded_at": "2022-03-31 17:28:31.331051Z",
       "sha": "11a75f8c271f6cd05276f49b038fbda8dfab77fe"
     },
     "nhsd-primary-care-domain-refsets-depr_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/depr_cod/20210127",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/depr_cod/20210127/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/depr_cod/20210127/",
       "downloaded_at": "2022-01-28 12:03:04.974496Z",
       "sha": "fe8bce134ed68b81aee0a15f8f258bfb31fc0c1c"
     },
     "opensafely-anxiety-disorders.csv": {
       "id": "opensafely/anxiety-disorders/6aef605a",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/anxiety-disorders/6aef605a/",
+      "url": "https://www.opencodelists.org/codelist/opensafely/anxiety-disorders/6aef605a/",
       "downloaded_at": "2022-08-06 13:06:17.445446Z",
       "sha": "7bd08502a20c7e84587944da97f66cae7c6fd19b"
     },
     "nhsd-primary-care-domain-refsets-depres_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/depres_cod/20200812",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/depres_cod/20200812/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/depres_cod/20200812/",
       "downloaded_at": "2022-02-03 21:34:25.197438Z",
       "sha": "f76c7ec24e3149b2b8836269c01be415573c6b52"
     },
     "nhsd-primary-care-domain-refsets-deprvw_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/deprvw_cod/20210127",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprvw_cod/20210127/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/deprvw_cod/20210127/",
       "downloaded_at": "2022-01-28 12:03:05.286304Z",
       "sha": "e63962fbaf4822cc4182331859656d55e1214b02"
     },
     "nhsd-primary-care-domain-refsets-deprinvite_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/deprinvite_cod/20200812",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprinvite_cod/20200812/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/deprinvite_cod/20200812/",
       "downloaded_at": "2022-04-01 10:06:02.101172Z",
       "sha": "d2528be7c514a7f60d9a702311df9c84b34e7a7d"
     },
     "nhsd-primary-care-domain-refsets-deprpcapu_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/deprpcapu_cod/20200812/",
       "downloaded_at": "2022-02-07 09:39:28.680203Z",
       "sha": "3370d7e4cd29e58c601a5d1a929694d40943f2b3"
     },
     "nhsd-primary-care-domain-refsets-deprpcadec_cod.csv": {
       "id": "nhsd-primary-care-domain-refsets/deprpcadec_cod/20200812",
-      "url": "https://codelists.opensafely.org/codelist/nhsd-primary-care-domain-refsets/deprpcadec_cod/20200812/",
+      "url": "https://www.opencodelists.org/codelist/nhsd-primary-care-domain-refsets/deprpcadec_cod/20200812/",
       "downloaded_at": "2022-02-07 09:39:28.893268Z",
       "sha": "48dfee6f515e12f4745e5c69502e8675db0fc1c9"
     },
     "opensafely-ethnicity-snomed-0removed.csv": {
       "id": "opensafely/ethnicity-snomed-0removed/2e641f61",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/ethnicity-snomed-0removed/2e641f61/",
+      "url": "https://www.opencodelists.org/codelist/opensafely/ethnicity-snomed-0removed/2e641f61/",
       "downloaded_at": "2022-08-05 08:48:30.069354Z",
       "sha": "8b849b5b785d80306e488d0109640c8c1d2da01b"
     },
     "opensafely-selective-serotonin-reuptake-inhibitors-dmd.csv": {
       "id": "opensafely/selective-serotonin-reuptake-inhibitors-dmd/6a572e55",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/selective-serotonin-reuptake-inhibitors-dmd/6a572e55/",
-      "downloaded_at": "2022-01-28 12:03:05.830982Z",
-      "sha": "85e3b0949455aa282fd26b09d523905127160789"
+      "url": "https://www.opencodelists.org/codelist/opensafely/selective-serotonin-reuptake-inhibitors-dmd/6a572e55/",
+      "downloaded_at": "2023-11-21 11:50:35.270210Z",
+      "sha": "9c3f92428dc0d056321618a0c6ebf13e72bed3c8"
     },
     "opensafely-tricyclic-and-related-antidepressants-dmd.csv": {
       "id": "opensafely/tricyclic-and-related-antidepressants-dmd/1268eae1",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/tricyclic-and-related-antidepressants-dmd/1268eae1/",
-      "downloaded_at": "2022-03-08 10:26:50.586517Z",
-      "sha": "83a2fab241ad02c9175479b8cad6955395b2f0ee"
+      "url": "https://www.opencodelists.org/codelist/opensafely/tricyclic-and-related-antidepressants-dmd/1268eae1/",
+      "downloaded_at": "2023-11-21 11:50:35.507778Z",
+      "sha": "3d1acfafa5a9b48e8fd56abd44f822788c481bf2"
     },
     "opensafely-monoamine-oxidase-inhibitors-dmd.csv": {
       "id": "opensafely/monoamine-oxidase-inhibitors-dmd/2b785e16",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/monoamine-oxidase-inhibitors-dmd/2b785e16/",
-      "downloaded_at": "2022-03-08 10:26:50.904539Z",
-      "sha": "1a1da18d75a6a1111929df9c2ab2799d2229a95c"
+      "url": "https://www.opencodelists.org/codelist/opensafely/monoamine-oxidase-inhibitors-dmd/2b785e16/",
+      "downloaded_at": "2023-11-21 11:50:35.729700Z",
+      "sha": "431bedcf6c870fbe29c6734ec791f4a4ac6ba2fb"
     },
     "opensafely-other-antidepressants-dmd.csv": {
       "id": "opensafely/other-antidepressants-dmd/795977ab",
-      "url": "https://codelists.opensafely.org/codelist/opensafely/other-antidepressants-dmd/795977ab/",
-      "downloaded_at": "2022-03-08 10:26:51.239102Z",
-      "sha": "d65ff8ed8378bf5c7875858b55b76527ec7f1574"
+      "url": "https://www.opencodelists.org/codelist/opensafely/other-antidepressants-dmd/795977ab/",
+      "downloaded_at": "2023-11-21 11:50:35.954709Z",
+      "sha": "2335c7cb289839bb32758573fa97437861615420"
     }
   }
 }
