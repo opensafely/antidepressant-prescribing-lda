@@ -4,8 +4,6 @@ import pandas
 import numpy
 import fnmatch
 
-from config import start_date
-
 """
 Generate table1 from joined measures file.
 Group by category and group, and then further split into columns based on user
@@ -124,25 +122,23 @@ def transform_percentage(x):
     return transformed
 
 
-def get_percentages(df, include_denominator):
+def get_percentages(df, include_denominator, include_rate):
     """
     Create a new column which has count (%) of group
     After computation is complete reconvert numeric to string and replace
     nan with "REDACTED" again
     """
-    # rate = (1000 * df.numerator / df.denominator).round(1).astype(str)
-    # rate = rate.replace("nan", "[REDACTED]")
-
     percent = df.groupby(level=0).transform(transform_percentage)
     percent = percent.replace("nan (nan)", "[REDACTED]")
 
-    if include_denominator:
-        cis = ci_95_proportion(df, scale=1000)
-        rate = ci_to_str(cis)
-        rate = rate.replace("nan (nan to nan)", "[REDACTED]")
-        percent["rate"] = rate
-    else:
+    cis = ci_95_proportion(df, scale=1000)
+    rate = ci_to_str(cis)
+    rate = rate.replace("nan (nan to nan)", "[REDACTED]")
+    percent["rate"] = rate
+    if not include_denominator:
         percent = percent.drop("denominator", axis=1)
+    if not include_rate:
+        percent = percent.drop("rate", axis=1)
     percent = percent.rename(
         columns={
             "numerator": "No. prescribed antidepressant (%)",
@@ -251,7 +247,18 @@ def parse_args():
     parser.add_argument(
         "--include-denominator",
         action="store_true",
-        help="Include denominator (%) and rate",
+        help="Include denominator (%)",
+    )
+    parser.add_argument(
+        "--include-rate",
+        action="store_true",
+        help="Include rate",
+    )
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        help="Date to select in YYYY-MM-DD format",
+        required=True,
     )
     return parser.parse_args()
 
@@ -265,6 +272,8 @@ def main():
     columns = args.column_names
     exclude_missing = args.exclude_missing
     include_denominator = args.include_denominator
+    include_rate = args.include_rate
+    start_date = args.start_date
 
     measure_table = get_measure_tables(input_file)
     subset = subset_table(measure_table, measures_pattern, start_date)
@@ -279,7 +288,7 @@ def main():
         overall = sub.loc[sub.iloc[0].name[0]].sum()
         overall.name = ("Total", "")
         sub = pandas.concat([pandas.DataFrame(overall).T, sub])
-        sub = get_percentages(sub, include_denominator)
+        sub = get_percentages(sub, include_denominator, include_rate)
         sub.columns = pandas.MultiIndex.from_product(
             [[f"{column.title()}"], sub.columns]
         )

@@ -324,9 +324,10 @@ actions:
             --measures-pattern "antidepressant_any_all_breakdown_*_rate"
             --measures-pattern "antidepressant_any_autism_breakdown_*_rate"
             --measures-pattern "antidepressant_any_learning_disability_breakdown_*_rate"
-            --include-denominator
+            --include-rate
             --column-names "all" "learning_disability" "autism"
             --output-name "table1.html"
+            --start-date "2022-10-01"
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
@@ -343,6 +344,7 @@ actions:
             --column-names "all" "learning_disability" "autism"
             --output-name "prescription.html"
             --exclude-missing
+            --start-date "2022-10-01"
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
@@ -354,9 +356,10 @@ actions:
             --input-file output/lda/codelist_update/joined/summary/measure_lda.csv
             --output-dir output/lda/codelist_update/joined/summary
             --measures-pattern "antidepressant_any_new_*_breakdown_*_rate"
-            --include-denominator
+            --include-rate
             --column-names "all" "learning_disability" "autism"
             --output-name "table1_new.html"
+            --start-date "2022-10-01"
     needs: [join_measures_lda]
     outputs:
       moderately_sensitive:
