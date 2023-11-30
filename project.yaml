@@ -80,14 +80,14 @@ actions:
 
   join_measures_num_matches:
       run: python:latest python analysis/join_and_round.py
-           --input-files output/curation/measure_*.csv
+           --input-files output/curation/measure_antidepressant_any_all_total_events_rate.csv
            --output-dir output/curation/
-           --output-name "measure_lda.csv"
+           --output-name "measure_events.csv"
       needs: [generate_measures_num_matches]
       outputs:
         moderately_sensitive:
           # Only output the single summary file
-          measure_csv: output/curation/measure_lda.csv
+          measure_csv: output/curation/measure_events.csv
 
   ####################
   # Cohort Generation
