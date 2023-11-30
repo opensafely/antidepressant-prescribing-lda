@@ -91,6 +91,21 @@ def flatten(df):
     return df
 
 
+def combine_included(df):
+    d = {}
+    for name, data in df.groupby(level=0):
+        print(name, data)
+        d[(name, "included")] = data[
+            ~data.index.get_level_values(1).isin(["Unknown", "I", "U"])
+        ].sum(min_count=1)
+        d[(name, "excluded")] = data[
+            data.index.get_level_values(1).isin(["Unknown", "I", "U"])
+        ].sum(min_count=1)
+
+    df = pandas.DataFrame(d).T
+    return df
+
+
 def ci_95_proportion(df, scale=1):
     # NOTE: do not assume df has value
     # See formula:
@@ -111,11 +126,20 @@ def ci_to_str(ci_df, decimals=1):
     )
 
 
+def less_than_1(x):
+    if x < 0.01:
+        return "< 0.01"
+    elif x < 0.1:
+        return "<0.1"
+    else:
+        return str(round(x, 1))
+
+
 def transform_percentage(x):
     transformed = (
         x.map("{:.0f}".format)
         + " ("
-        + (((x / x.sum()) * 100).round(1)).astype(str)
+        + (((x / x.sum()) * 100)).apply(lambda x: less_than_1(x))
         + ")"
     )
     transformed.name = f"{x.name} (%)"
@@ -255,10 +279,26 @@ def parse_args():
         help="Include rate",
     )
     parser.add_argument(
+        "--combine",
+        action="store_true",
+        help="Combine included/excluded into their own rows",
+    )
+    parser.add_argument(
+        "--no-overall",
+        action="store_true",
+        help="Do not include row with total",
+    )
+    parser.add_argument(
         "--start-date",
         type=str,
         help="Date to select in YYYY-MM-DD format",
         required=True,
+    )
+    parser.add_argument(
+        "--output-type",
+        choices=["html", "csv"],
+        default="html",
+        help="Output file type",
     )
     return parser.parse_args()
 
@@ -273,7 +313,10 @@ def main():
     exclude_missing = args.exclude_missing
     include_denominator = args.include_denominator
     include_rate = args.include_rate
+    combine = args.combine
+    no_overall = args.no_overall
     start_date = args.start_date
+    output_type = args.output_type
 
     measure_table = get_measure_tables(input_file)
     subset = subset_table(measure_table, measures_pattern, start_date)
@@ -285,9 +328,12 @@ def main():
         sub = flatten(sub)
         sub = sub.set_index(["category", "group"])
         sub = sub[["numerator", "denominator"]]
-        overall = sub.loc[sub.iloc[0].name[0]].sum()
-        overall.name = ("Total", "")
-        sub = pandas.concat([pandas.DataFrame(overall).T, sub])
+        if combine:
+            sub = combine_included(sub)
+        if not no_overall:
+            overall = sub.loc[sub.iloc[0].name[0]].sum()
+            overall.name = ("Total", "")
+            sub = pandas.concat([pandas.DataFrame(overall).T, sub])
         sub = get_percentages(sub, include_denominator, include_rate)
         sub.columns = pandas.MultiIndex.from_product(
             [[f"{column.title()}"], sub.columns]
@@ -301,7 +347,10 @@ def main():
     if exclude_missing:
         table1 = table1[table1.index.get_level_values(1) != "Missing"]
     table1 = reorder_dataframe(table1)
-    table1.to_html(output_dir / output_name, index=True)
+    if output_type == "html":
+        table1.to_html(output_dir / f"{output_name}", index=True)
+    else:
+        table1.to_csv(output_dir / f"{output_name}", index=True)
 
 
 if __name__ == "__main__":

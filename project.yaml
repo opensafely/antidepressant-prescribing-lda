@@ -50,6 +50,23 @@ actions:
           # Only output the single summary file
           measure_csv: output/curation/exclusions/exclusions.csv
 
+  generate_exclusions_table:
+    run: >
+            python:latest python analysis/table1.py
+            --input-file output/curation/exclusions/exclusions.csv
+            --output-dir output/curation/exclusions
+            --measures-pattern "antidepressant_any*"
+            --column-names "all" "learning_disability" "autism"
+            --output-name "exclusions_table.csv"
+            --start-date "2022-10-01"
+            --output-type "csv"
+            --combine
+            --no-overall
+            --include-denominator
+    needs: [join_measures_exclusions]
+    outputs:
+      moderately_sensitive:
+        cohort: output/curation/exclusions/exclusions_table.csv
 
   # For comparison with openprescribing
   generate_study_population_num_matches_2018_2019:
