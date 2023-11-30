@@ -59,8 +59,12 @@ def redact_df_by_date(measure_table, redact_zeroes=False):
     level = f"level_{len(groupby)}"
     # If there is only one group
     if ~(redacted[groupby].nunique() > 1).any():
-        num = _suppress_column(redacted["numerator"])
-        denom = _suppress_column(redacted["denominator"])
+        num = _suppress_column(
+            redacted["numerator"], redact_zeroes=redact_zeroes
+        )
+        denom = _suppress_column(
+            redacted["denominator"], redact_zeroes=redact_zeroes
+        )
     else:
         num = (
             redacted.groupby(groupby)
