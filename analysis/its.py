@@ -17,6 +17,27 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 STEP_TIME_1 = pandas.to_datetime("2020-03-01")
 STEP_TIME_2 = pandas.to_datetime("2021-04-01")
 
+# prescription needs to be count
+DEMOGRAPHICS = [
+    "total",
+    "age_band",
+    "carehome",
+    "diagnosis_18+",
+    "ethnicity",
+    "imd",
+    "region",
+    "sex",
+]
+# DEMOGRAPHICS = ["age_band", "carehome", "diagnosis_18+", "ethnicity", "imd", "region", "sex"]
+
+MAPPING = {
+    "baseline": "Baseline Relative Risk",
+    "slope": "Lockdown vs. Pre-COVID\nSlope change",
+    "slope2": "Recovery vs. Lockdown\nSlope change",
+    "step": "Lockdown\nLevel shift",
+    "step2": "Recovery\nLevel shift",
+}
+
 ##################
 # Model building
 ##################
@@ -57,7 +78,7 @@ def get_formula(df, fourier_terms=None, group=None, reference=None):
     return formula
 
 
-def get_regression(df, lags, formula, group, interaction=False):
+def get_regression(df, lags, formula, interaction=False):
     """
     Fit the model
     Adjust the standard errors with NeweyWest (single sequence) or for panel
@@ -65,11 +86,14 @@ def get_regression(df, lags, formula, group, interaction=False):
 
     """
     if not interaction:
-        model_errors = smf.poisson(
-            formula,
-            data=df,
-            exposure=df.denominator,
-        ).fit(cov_type="HAC", cov_kwds={"maxlags": lags}, maxiter=200)
+        try:
+            model_errors = smf.poisson(
+                formula,
+                data=df,
+                exposure=df.denominator,
+            ).fit(cov_type="HAC", cov_kwds={"maxlags": lags}, maxiter=200)
+        except Exception as e:
+            return None
     else:
         model_errors = smf.poisson(
             formula,
@@ -85,6 +109,7 @@ def get_regression(df, lags, formula, group, interaction=False):
     return model_errors
 
 
+# Is used in get_models
 def is_bool_as_int(series):
     """Does series have bool values but an int dtype?"""
     if not pandas.api.types.is_bool_dtype(
@@ -103,25 +128,6 @@ def is_bool_as_int(series):
         return ((series == 0) | (series == 1)).all()
     else:
         return False
-
-
-def series_to_bool(series):
-    if is_bool_as_int(series):
-        return series.astype(int).astype(bool)
-    else:
-        return series
-
-
-def flatten(df):
-    """
-    Filter for rows where that value is true
-
-    """
-    df = df.dropna(axis=1, how="all")
-    df.group_0 = series_to_bool(df.group_0)
-    if len(df["category_0"].unique()) == 1 and df["group_0"].dtype == "bool":
-        df = df[df["group_0"]]
-    return df
 
 
 def get_its_variables(dataframe, cutdate1, cutdate2):
@@ -152,42 +158,59 @@ def get_its_variables(dataframe, cutdate1, cutdate2):
     return df
 
 
-def get_model(
+# NOTE: used in get_models
+def bool_to_category(subset, group):
+    category = f"{group.replace('group', 'category')}"
+    bool_as_int = is_bool_as_int(subset[group])
+    if bool_as_int:
+        subset[group] = subset.apply(
+            lambda x: f"Recorded {x[category]}"
+            if x[group] == "1"
+            else f"No recorded {x[category]}",
+            axis=1,
+        )
+    return subset
+
+
+def get_models(
     measure_table,
     pattern,
-    group=None,
+    group,
     reference=None,
     interaction=False,
-    convert_flat=False,
 ):
     """
-    Return both the its dataframe and the fitted model
-
+    Return a list of (dataframe, fitted model) tuples
+    Based on whether it is an interaction model, a single subset, or separate
+    models for each subset
     """
-    print("getting model", pattern)
     subset = subset_table(measure_table, pattern)
-    if group is not None:
-        subset = subset[~subset[group].isnull()]
-    if convert_flat:
-        subset = flatten(subset)
-    if group is not None:
-        bool_as_int = is_bool_as_int(subset[group])
-        interaction_category = f"{group.replace('group', 'category')}"
-        if bool_as_int:
-            subset[group] = subset.apply(
-                lambda x: f"Recorded {x[interaction_category]}"
-                if x[group] == "1"
-                else f"No recorded {x[interaction_category]}",
-                axis=1,
-            )
-            if reference == "0":
-                reference = (
-                    f"No recorded {subset[interaction_category].iloc[0]}"
-                )
-            else:
-                reference = f"Recorded {subset[interaction_category].iloc[0]}"
-    if group and not interaction and subset[group].nunique() > 1:
-        subset = subset[subset[group] == reference]
+    subset = bool_to_category(subset, group)
+    subset = subset[~subset[group].isnull()]
+
+    # If group_1 is used, then we only want to take the true values for 0
+    # We do not support two-level interactions
+    if group == "group_1":
+        subset = subset_group(subset, "group_0", "1")
+
+    models = []
+    if interaction:
+        if not reference:
+            raise Exception("Need to have a reference group")
+        # We can return one model with the interaction
+        models.append(get_model_short(subset, group, reference, interaction))
+    elif reference:
+        # We can return one model subsetting the reference
+        subset = subset_group(subset, group, reference)
+        models.append(get_model_short(subset, group, reference, interaction))
+    else:
+        # Return a list of models, one for each category
+        for subgroup, subgroup_data in subset.groupby(group):
+            models.append(get_model_short(subgroup_data, None, None, False))
+    return models
+
+
+def get_model_short(subset, group, reference, interaction):
     df = get_its_variables(subset, STEP_TIME_1, STEP_TIME_2)
     fourier = get_fourier(df)
     formula = get_formula(
@@ -196,15 +219,8 @@ def get_model(
         group=group,
         reference=reference,
     )
-    formula_no_fourier = get_formula(
-        df,
-        fourier_terms=None,
-        group=group,
-        reference=reference,
-    )
     df = pandas.concat([df, fourier], axis=1)
-    model = get_regression(df, 2, formula, group, interaction)
-    _ = get_regression(df, 2, formula_no_fourier, group)
+    model = get_regression(df, 2, formula, interaction)
     return (model, df)
 
 
@@ -240,129 +256,142 @@ def plot_group(measure_table, pattern, group, rr=False):
     Option to display either the counter factual plot, or the relative risk
     plot
     """
-    subset = subset_table(measure_table, pattern)
-    grouped_data = subset.groupby(group)
-    total_rows = (grouped_data.ngroups + 1) // 2
+    models = get_models(measure_table, pattern, group)
+    total_rows = (len(models)) // 2
 
-    fig = plt.figure(figsize=(12, 4 * total_rows), dpi=150)
+    fig = plt.figure(figsize=(22, 4 * total_rows), dpi=150)
 
-    for index, data in enumerate(grouped_data):
-        category, category_data = data
-        model, its_data = get_model(
-            category_data,
-            pattern,
+    for index, model in enumerate(models):
+        category = model[1][group].iloc[0]
+        ax = add_subplot(
+            fig,
+            (total_rows, 2, index + 1),
+            [model],
             group=group,
-            reference=category,
+            rr=rr,
+            title=f"{category.title()}",
         )
-        if rr:
-            ax = display_rr(
-                fig,
-                (total_rows, 2, index + 1),
-                model,
-                its_data,
-                title=f"{category.title()}",
-            )
-        else:
-            ax = plot(
-                fig,
-                (total_rows, 2, index + 1),
-                model,
-                its_data,
-                group=group,
-                title=f"{category.title()}",
-            )
-        if index < (grouped_data.ngroups - 2):
+        if index < (len(models) - 2):
             ax.set_xticklabels([])
     fig.legend(*ax.get_legend_handles_labels(), fontsize="x-small")
     fig.supylabel("Rate per 1,000 registered patients")
     plt.savefig(f"{pattern}_fig.png")
 
 
-def plot(
+def add_subplot(
     fig,
     pos,
-    model,
-    df,
+    models,
     group=None,
+    rr=False,
     other_ax=None,
     title=None,
     ylabel=None,
 ):
     """
+    Create subplot of a figure
     Plot of observed and fitted values with vertical lines for interruptions
     If there is only one group (no interaction) plot the counterfactual
 
     """
     row, col, index = pos
     ax = fig.add_subplot(row, col, index, sharex=other_ax, sharey=other_ax)
-    if group and df[group].nunique() > 1:
-        for group, data in df.groupby(group):
+    # Plot observed and fitted subgroups on the same plot
+    if len(models) > 1:
+        for model, data in models:
             predictions = model.get_prediction(data).summary_frame(alpha=0.05)
             ax.plot(
-                data["date"], 1000 * predictions["predicted"], label=f"{group}"
+                data["date"],
+                1000 * predictions["predicted"],
+                label=f"{data[group].iloc[0]}",
             )
             ax.scatter(data["date"], 1000 * data["value"])
-
     else:
-        predictions = model.get_prediction(df).summary_frame(alpha=0.05)
-        predictions.index = df.index
-        df = df.set_index("date")
+        model, df = models[0]
+        # Interaction
+        if group and df[group].nunique() > 1:
+            for group, data in df.groupby(group):
+                predictions = model.get_prediction(data).summary_frame(
+                    alpha=0.05
+                )
+                ax.plot(
+                    data["date"],
+                    1000 * predictions["predicted"],
+                    label=f"{group}",
+                )
+                ax.scatter(data["date"], 1000 * data["value"])
 
-        # counterfactual assumes no interventions
-        cf_df = df.copy()
-        cf_df["slope"] = 0.0
-        cf_df["step"] = 0.0
-        cf_df["mar20"] = 0.0
-        cf_df["april20"] = 0.0
-        cf_df["slope2"] = 0.0
-        cf_df["step2"] = 0.0
-
-        # counter-factual predictions
-        cf = model.get_prediction(cf_df).summary_frame(alpha=0.05)
-        cf.index = df.index
-
-        # Plot observed data
-        ax.scatter(
-            df.index,
-            1000 * df["value"],
-            s=10,
-            facecolors="k",
-            linewidths=2,
+        else:
+            if rr:
+                display_rr(model, df, ax)
+            else:
+                plot_cf(model, df, ax)
+        # Plot line marking intervention
+        ax.axvline(
+            x=STEP_TIME_1, linestyle="--", color="blue", label="Lockdown"
         )
-        # Plot fitted line
-        ax.plot(
-            df.index,
-            1000 * predictions["predicted"],
-            label="Fitted values",
-            color="k",
+        ax.axvline(
+            x=STEP_TIME_2, linestyle="--", color="green", label="Recovery"
         )
-
-        # Plot counterfactual mean rate
-        ax.plot(
-            df[STEP_TIME_1:].index,
-            1000 * cf[STEP_TIME_1:]["predicted"],
-            "r--",
-            label="No COVID-19 counterfactual",
-        )
-
-        # Plot counterfactual CI
-        ax.fill_between(
-            df[STEP_TIME_1:].index,
-            1000 * cf[STEP_TIME_1:]["ci_lower"],
-            1000 * cf[STEP_TIME_1:]["ci_upper"],
-            color="gray",
-            alpha=0.1,
-        )
-
-    # Plot line marking intervention
-    ax.axvline(x=STEP_TIME_1, linestyle="--", color="blue", label="Lockdown")
-    ax.axvline(x=STEP_TIME_2, linestyle="--", color="green", label="Recovery")
-    ax.set_title(title, fontsize="x-small")
+        ax.set_title(title, fontsize="x-small")
     if ylabel:
         ax.set_ylabel(ylabel, fontsize="x-small")
-    # ax.legend(fontsize="x-small")
-    # ax.legend(bbox_to_anchor=(1, 1), loc="upper left", fontsize="x-small")
+        ax.legend(fontsize="x-small")
+    ax.legend(bbox_to_anchor=(1, 1), loc="upper left", fontsize="x-small")
     return ax
+
+
+def plot_cf(model, df, ax):
+    # Single model with counterfactual
+    predictions = model.get_prediction(df).summary_frame(alpha=0.05)
+    predictions.index = df.index
+    df = df.set_index("date")
+
+    # counterfactual assumes no interventions
+    cf_df = df.copy()
+    cf_df["slope"] = 0.0
+    cf_df["step"] = 0.0
+    cf_df["mar20"] = 0.0
+    cf_df["april20"] = 0.0
+    cf_df["slope2"] = 0.0
+    cf_df["step2"] = 0.0
+
+    # counter-factual predictions
+    cf = model.get_prediction(cf_df).summary_frame(alpha=0.05)
+    cf.index = df.index
+
+    # Plot observed data
+    ax.scatter(
+        df.index,
+        1000 * df["value"],
+        s=10,
+        facecolors="k",
+        linewidths=2,
+    )
+    # Plot fitted line
+    ax.plot(
+        df.index,
+        1000 * predictions["predicted"],
+        label="Fitted values",
+        color="k",
+    )
+
+    # Plot counterfactual mean rate
+    ax.plot(
+        df[STEP_TIME_1:].index,
+        1000 * cf[STEP_TIME_1:]["predicted"],
+        "r--",
+        label="No COVID-19 counterfactual",
+    )
+
+    # Plot counterfactual CI
+    ax.fill_between(
+        df[STEP_TIME_1:].index,
+        1000 * cf[STEP_TIME_1:]["ci_lower"],
+        1000 * cf[STEP_TIME_1:]["ci_upper"],
+        color="gray",
+        alpha=0.1,
+    )
 
 
 def get_ci_df(model):
@@ -380,15 +409,23 @@ def get_ci_df(model):
 
 
 def get_ci_label(df, round_to=2, pcnt=True):
+    """
+    Translate a dataframe with coef, lci, uci into a CI string
+    Either as percent change or RR
+    If a coef is 0 or 1 (for pcnt, RR), then it is the ref group
+    If a coef is nan, display as "-"
+    """
     if pcnt:
         df = df.apply(
             lambda x: 100 * (numpy.exp(x) - 1) if is_numeric_dtype(x) else x,
             axis=0,
         )
         label = df.apply(
-            lambda x: f"{x.coef:.2f}% ({x.lci:.2f}% to {x.uci:.2f}%)"
-            if x.coef != 0
-            else f"{'-': <15}",
+            lambda x: "-"
+            if x.coef != x.coef
+            else f"{'-': <15}"
+            if x.coef == 0
+            else f"{x.coef:.2f}% ({x.lci:.2f}% to {x.uci:.2f}%)",
             axis=1,
         )
     else:
@@ -396,9 +433,11 @@ def get_ci_label(df, round_to=2, pcnt=True):
             lambda x: numpy.exp(x) if is_numeric_dtype(x) else x, axis=0
         )
         label = df.apply(
-            lambda x: f"{x.coef:.2f} ({x.lci:.2f} to {x.uci:.2f})"
-            if x.coef != 1
-            else f"{'Ref': <27}",
+            lambda x: "-"
+            if x.coef != x.coef
+            else f"{'Ref': <27}"
+            if x.coef == 1
+            else f"{x.coef:.2f} ({x.lci:.2f} to {x.uci:.2f})",
             axis=1,
         )
     df["label"] = label
@@ -408,44 +447,19 @@ def get_ci_label(df, round_to=2, pcnt=True):
 def pcnt_change(
     measure_table,
     pattern,
-    group=None,
+    group,
     reference=None,
-    convert_flat=False,
     interaction=False,
 ):
     """
     Format a model for a forest plot
     """
-    category_name = "category_0"
-    if group is not None:
-        category_name = f"category_{group.split('_')[-1]}"
-    subset = subset_table(measure_table, pattern)
-    name = subset[category_name].unique()[0]
-
-    if not interaction and subset[group].nunique() > 1:
-        all_data = []
-        for subgroup, subgroup_data in subset.groupby(group):
-            model, its_data = get_model(
-                subgroup_data,
-                pattern,
-                group,
-                reference=subgroup,
-                convert_flat=convert_flat,
-                interaction=interaction,
-            )
-            subgroup_cis = get_ci_df(model)
-            indices = list(
-                zip(subgroup_cis.index, len(subgroup_cis) * [subgroup])
-            )
-            subgroup_cis.index = pandas.MultiIndex.from_tuples(
-                indices, names=["change", "group"]
-            )
-            all_data.append(subgroup_cis)
-        df = pandas.concat(all_data)
-    if interaction:
-        model, its_data = get_model(
-            subgroup_data, pattern, group, reference, convert_flat, interaction
-        )
+    category_name = f"category_{group.split('_')[-1]}"
+    models = get_models(measure_table, pattern, group, reference, interaction)
+    # Interaction
+    # TODO: here too handle no model
+    if interaction and len(models) == 1:
+        model, data = models[0]
         df = get_ci_df(model)
         df = df[df.index.str.contains("T.")]
         keys = list(df.index)
@@ -471,28 +485,44 @@ def pcnt_change(
         ref["group"] = reference
         ref = ref.set_index(["change", "group"])
         df = pandas.concat([df, ref])
-    df["category"] = name
+
+    else:
+        all_data = {}
+        for model, its_data in models:
+            subgroup = its_data[group].iloc[0]
+            if model:
+                subgroup_cis = get_ci_df(model)
+            else:
+                subgroup_cis = pandas.DataFrame(dtype="float64")
+            all_data[subgroup] = subgroup_cis
+    # Ensure that every model has the same set of indices
+    # Even if we do not know the list before
+    # TODO: This will re-order the levels- check that they are correct and consistent
+    full_index = set(pandas.concat(all_data).index.get_level_values(1))
+    for key, value in all_data.items():
+        all_data[key] = value.reindex(full_index)
+    df = pandas.concat(all_data)
+    df["category"] = models[0][1][category_name].iloc[0]
     return df
 
 
-def group_forest(df, columns, as_rr=[]):
+def group_forest(df, as_pcnt=[], as_rr=[], mapping=None):
     """
     Create a forest plot with a column for each study period, and a row for
     each subgroup.
 
     """
-    mapping = {
-        "baseline": "Baseline Relative Risk",
-        "slope": "Lockdown vs. Pre-COVID\nSlope change",
-        "slope2": "Recovery vs. Lockdown\nSlope change",
-        "step": "Lockdown\nLevel shift",
-        "step2": "Recovery\nLevel shift",
-    }
+    frames = []
+    if as_rr:
+        rr = get_ci_label(df[df.index.isin(as_rr, level=0)], pcnt=False)
+        frames.append(rr)
 
-    rr = get_ci_label(df[df.index.isin(as_rr, level=0)], pcnt=False)
-    pcnt = get_ci_label(df[df.index.isin(columns, level=0)])
+    if as_pcnt:
+        pcnt = get_ci_label(df[df.index.isin(as_pcnt, level=0)], pcnt=True)
+        frames.append(pcnt)
 
-    df = pandas.concat([rr, pcnt])
+    df = pandas.concat(frames)
+
     rows = (
         df.loc[df.index.get_level_values(0)[0]]
         .groupby(["category"])
@@ -524,8 +554,12 @@ def group_forest(df, columns, as_rr=[]):
             color = "k"
         if i % ncols == 0:
             ax.set_ylabel(key[0])
+            # NOTE: we cannot rjust the entire thing because font
+            # has different widths for different characters
             y_ticks = [
-                "   ".join(x)
+                "    ".join(x)
+                if x[1] != "-"
+                else x[0] + "    " + x[1].rjust(38)
                 for x in list(zip(grp.index.get_level_values(1), grp.label))
             ]
         else:
@@ -546,7 +580,10 @@ def group_forest(df, columns, as_rr=[]):
         ax.set_yticks(list(range(len(y_ticks))), y_ticks)
         if i < ncols:
             ax.set_title(
-                mapping[key[1]], loc="center", fontsize=12, fontweight="bold"
+                (mapping[key[1]] if mapping else key[1]),
+                loc="center",
+                fontsize=12,
+                fontweight="bold",
             )
         ax.axvline(x=ax_line, linewidth=0.8, linestyle="--", color="black")
         ax.set_xlabel(x_label, fontsize=8)
@@ -593,6 +630,7 @@ def compute_gm(model, df):
     GM = pandas.DataFrame(gm)
     GM["lci"] = GM["coef"] - 1.96 * geom_se
     GM["uci"] = GM["coef"] + 1.96 * geom_se
+    GM["error"] = geom_se
     return GM
 
 
@@ -640,29 +678,24 @@ def compute_rr(model, df):
     return (RR, df, vcov)
 
 
-def display_rr(fig, pos, model, df, other_ax=None, title=None):
-    row, col, index = pos
-    ax = fig.add_subplot(row, col, index, sharex=other_ax, sharey=other_ax)
+def display_rr(model, df, ax):
     RR, _, _ = compute_rr(model, df)
 
     plt.vlines(RR.index, RR.lci, RR.uci, color="k")
     ax.plot(RR.index, RR.RR, color="k")
     ax.axhline(y=1.0, color="r", linestyle="--")
-    ax.set_title(title)
     ax.set_ylabel(
         "Relative Risk of Antidepressant Prescribing (95% CI)\nCompared to no COVID-19 counterfactual"
     )
-    ax.set_xlabel("COVID-19 Period")
     gm = get_ci_label(compute_gm(model, df), pcnt=False).iloc[-1].label
     ax.text(
         0.8,
-        0.2,
+        0.8,
         "Geometric mean\nof RR over\ntime period:\n" + gm,
         transform=ax.transAxes,
         fontsize=12,
         bbox={"facecolor": "red", "alpha": 0.5},
     )
-    return ax
 
 
 def translate_to_ci(coefs, name):
@@ -692,9 +725,9 @@ def translate_to_ci(coefs, name):
 def output_acf_pacf(measure_table, output_dir):
     residuals_dir = output_dir / "residuals"
     residuals_dir.mkdir(exist_ok=True)
-    model_all, _ = get_model(
-        measure_table, "antidepressant_any_all_total_rate"
-    )
+    model_all = get_models(
+        measure_table, "antidepressant_any_all_total_rate", "group_0"
+    )[0][0]
     check_residuals(model_all, residuals_dir, "model_all_noerr")
 
 
@@ -729,6 +762,10 @@ def subset_table(measure_table, measures_pattern):
     return measure_table[measure_table["name"].isin(measures_list)]
 
 
+def subset_group(measure_table, group, reference):
+    return measure_table[measure_table[group] == reference]
+
+
 def get_path(*args):
     return pathlib.Path(*args).resolve()
 
@@ -742,75 +779,69 @@ def match_paths(files, pattern):
 #######################################
 
 
-def figure_2(measure_table, output_dir):
+def figure_2(measure_table, output_dir, rr=False):
     # Figure 1
     fig = plt.figure(figsize=(16, 8), dpi=150)
 
-    model_aut, aut_data = get_model(
+    models_aut = get_models(
         measure_table,
         "antidepressant_any_autism_total_rate",
         group="group_0",
-        # reference="No recorded autism",
         reference="Recorded autism",
     )
-    ax = plot(
+    add_subplot(
         fig,
         (2, 2, 1),
-        model_aut,
-        aut_data,
+        models_aut,
         group="group_0",
+        rr=rr,
         ylabel="Rate per 1,000 autism patients",
         title="Antidepressant Prescribing Autism",
     )
-    model_ld, ld_data = get_model(
+    models_ld = get_models(
         measure_table,
         "antidepressant_any_learning_disability_total_rate",
         group="group_0",
-        # reference="No recorded learning_disability",
         reference="Recorded learning_disability",
     )
-    plot(
+    add_subplot(
         fig,
         (2, 2, 2),
-        model_ld,
-        ld_data,
+        models_ld,
+        rr=rr,
         group="group_0",
         ylabel="Rate per 1,000 LD patients",
         title="Antidepressant Prescribing Learning Disability",
-        # other_ax=ax,
     )
 
-    model_aut_new, aut_new_data = get_model(
+    models_aut_new = get_models(
         measure_table,
         "antidepressant_any_new_autism_total_rate",
         group="group_0",
-        # reference="No recorded autism",
         reference="Recorded autism",
     )
-    ax_new = plot(
+    add_subplot(
         fig,
         (2, 2, 3),
-        model_aut_new,
-        aut_new_data,
+        models_aut_new,
         group="group_0",
+        rr=rr,
         ylabel="Rate per 1,000 AD naive autism patients",
         title="New Antidepressant Prescribing Autism",
     )
-    model_ld_new, ld_new_data = get_model(
+    models_ld_new = get_models(
         measure_table,
         "antidepressant_any_new_learning_disability_total_rate",
         group="group_0",
-        # reference="No recorded learning_disability",
         reference="Recorded learning_disability",
     )
-    plot(
+    add_subplot(
         fig,
         (2, 2, 4),
-        model_ld_new,
-        ld_new_data,
+        models_ld_new,
         group="group_0",
+        rr=rr,
         ylabel="Rate per 1,000 AD naive LD patients",
-        # other_ax=ax_new,
         title="New Antidepressant Prescribing Learning Disability",
     )
 
@@ -848,235 +879,47 @@ def forest(measure_table, output_dir):
     new = new.set_index(["change", "group"])
     df = pandas.concat([model_aut, model_ld, new])
 
-    group_forest(df, ["slope", "slope2", "step", "step2"], as_rr=["baseline"])
+    group_forest(
+        df,
+        as_pcnt=["slope", "slope2", "step", "step2"],
+        as_rr=["baseline"],
+        mapping=MAPPING,
+    )
     plt.savefig(output_dir / "figure_3.png")
 
 
-def forest_any(measure_table, output_dir):
-    # Forest plot
-    # TODO: see if ethnicity/imd errors with panel corrections occur in R
-    model_age = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_age_band_rate",
-        group="group_0",
-    )
-    model_carehome = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_carehome_rate",
-        group="group_0",
-    )
-    model_ethnicity = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_ethnicity_rate",
-        group="group_0",
-    )
-    model_imd = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_imd_rate",
-        group="group_0",
-    )
-    model_region = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_region_rate",
-        group="group_0",
-    )
-    model_sex = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_sex_rate",
-        group="group_0",
-    )
-    model_diagnosis = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_diagnosis_18+_rate",
-        group="group_0",
-    )
-    model_prescription = pcnt_change(
-        measure_table,
-        "antidepressant_any_all_breakdown_prescription_count",
-        group="group_0",
-    )
-    df = pandas.concat(
-        [
-            model_age,
-            model_carehome,
-            model_ethnicity,
-            model_imd,
-            model_region,
-            model_sex,
-            model_diagnosis,
-            model_prescription,
-        ]
-    )
-
-    group_forest(df, ["slope", "slope2", "step", "step2"])
-    plt.savefig(output_dir / "figure_3.png")
-
-
-def forest_autism(measure_table, output_dir):
-    # Forest plot
-    model_carehome = pcnt_change(
-        measure_table,
-        "antidepressant_any_autism_breakdown_carehome_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_age = pcnt_change(
-        measure_table,
-        "antidepressant_any_autism_breakdown_age_band_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_ethnicity = pcnt_change(
-        measure_table,
-        "antidepressant_any_autism_breakdown_ethnicity_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_imd = pcnt_change(
-        measure_table,
-        "antidepressant_any_autism_breakdown_imd_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    # model_region = pcnt_change(
-    #   measure_table,
-    #   "antidepressant_any_autism_breakdown_region_rate",
-    #   group="group_1",
-    #   convert_flat=True,
-    # )
-    model_sex = pcnt_change(
-        measure_table,
-        "antidepressant_any_autism_breakdown_sex_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_diagnosis = pcnt_change(
-        measure_table,
-        "antidepressant_any_autism_breakdown_diagnosis_18+_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_prescription = pcnt_change(
-        measure_table,
-        "antidepressant_any_autism_breakdown_prescription_count",
-        group="group_1",
-        reference="ssri",
-    )
-    df = pandas.concat(
-        [
-            model_age,
-            model_carehome,
-            model_ethnicity,
-            model_imd,
-            #        model_region,
-            model_sex,
-            model_diagnosis,
-            model_prescription,
-        ]
-    )
-
-    group_forest(df, ["slope", "slope2", "step", "step2"])
-    plt.savefig(output_dir / "aut_breakdown.png")
-
-
-def forest_ld(measure_table, output_dir):
-    # Forest plot
-    model_carehome = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_carehome_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_age = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_age_band_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_ethnicity = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_ethnicity_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_imd = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_imd_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_region = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_region_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_sex = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_sex_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_diagnosis = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_diagnosis_18+_rate",
-        group="group_1",
-        convert_flat=True,
-    )
-    model_prescription = pcnt_change(
-        measure_table,
-        "antidepressant_any_learning_disability_breakdown_prescription_count",
-        group="group_1",
-        convert_flat=True,
-    )
-    df = pandas.concat(
-        [
-            model_age,
-            model_carehome,
-            model_ethnicity,
-            model_imd,
-            model_region,
-            model_sex,
-            model_diagnosis,
-            model_prescription,
-        ]
-    )
-
-    group_forest(df, ["slope", "slope2", "step", "step2"], as_rr=["baseline"])
-    plt.savefig(output_dir / "ld_breakdown.png")
-
-
+# TODO: we could make a loop instead of doing each individually
 def table_any_new(measure_table, output_dir):
-    model_all, _ = get_model(
-        measure_table, "antidepressant_any_all_total_rate"
-    )
-    model_new, _ = get_model(
-        measure_table, "antidepressant_any_new_all_total_rate"
-    )
-    model_aut, _ = get_model(
+    model_all = get_models(
+        measure_table, "antidepressant_any_all_total_rate", "group_0"
+    )[0][0]
+    model_new = get_models(
+        measure_table, "antidepressant_any_new_all_total_rate", "group_0"
+    )[0][0]
+    model_aut = get_models(
         measure_table,
         "antidepressant_any_autism_total_rate",
         group="group_0",
         reference="Recorded autism",
-    )
-    model_ld, _ = get_model(
+    )[0][0]
+    model_ld = get_models(
         measure_table,
         "antidepressant_any_learning_disability_total_rate",
         group="group_0",
         reference="Recorded learning_disability",
-    )
-    model_aut_new, _ = get_model(
+    )[0][0]
+    model_aut_new = get_models(
         measure_table,
         "antidepressant_any_new_autism_total_rate",
         group="group_0",
         reference="Recorded autism",
-    )
-    model_ld_new, _ = get_model(
+    )[0][0]
+    model_ld_new = get_models(
         measure_table,
         "antidepressant_any_new_learning_disability_total_rate",
         group="group_0",
         reference="Recorded learning_disability",
-    )
+    )[0][0]
     all_coef = translate_to_ci(get_ci_df(model_all), "All prescribing")
     new_coef = translate_to_ci(get_ci_df(model_new), "New prescribing")
     aut_coef = translate_to_ci(get_ci_df(model_aut), "Autism prescribing")
@@ -1087,274 +930,271 @@ def table_any_new(measure_table, output_dir):
     ld_new_coef = translate_to_ci(
         get_ci_df(model_ld_new), "LD new prescribing"
     )
-    table2 = pandas.concat(
+    table = pandas.concat(
         [all_coef, new_coef, aut_coef, aut_new_coef, ld_coef, ld_new_coef]
     )
-    table2.to_html(output_dir / "table3.html")
+    table.to_html(output_dir / "table3.html")
 
 
-def create_gm_row(measure_table, pattern, label, group=None, reference=None):
-    cis = get_ci_label(
-        compute_gm(*get_model(measure_table, pattern, group, reference)),
-        pcnt=False,
-    )
-    d = {
-        "Average RR at Recovery start": cis.loc[STEP_TIME_2].label,
-        "Average RR at Study End": cis.iloc[-1].label,
-    }
-    df = pandas.DataFrame.from_dict(d, orient="index", columns=[label])
+def table_geometric_mean(
+    measure_table, pattern, label, group=None, reference=None
+):
+    category = f"{group.replace('group', 'category')}"
+    models = get_models(measure_table, pattern, group, reference=reference)
+    rows = {}
+    for model, data in models:
+        group_label = "Overall" if len(models) == 1 else data[group].iloc[-1]
+        category_label = (
+            "population" if len(models) == 1 else data[category].iloc[-1]
+        )
+        # label = "Overall" if len(models) == 1 else label
+        if model:
+            coefs = compute_gm(model, data)
+            row = coefs.iloc[-1]
+        else:
+            row = pandas.Series()
+        row["category"] = category_label
+        rows[(label, group_label)] = row
+    df = pandas.concat(rows, axis=1).T
+    # Cast all the data as float, but skip errors per-column
+    # When we have nans, we have an empty series initialised with a string
+    # This causes the other columns to be converted to objects
+    df = df.apply(pandas.to_numeric, errors="ignore")
+    df.index.names = ["change", "group"]
     return df
 
 
-def test_gm(measure_table, output_dir):
+def forest_geometric_mean(measure_table, output_dir, new=False):
     results = []
-    results.append(
-        create_gm_row(
-            measure_table,
-            "antidepressant_any_all_total_rate",
-            "All prescribing",
+    if new:
+        new_string = "new_"
+    else:
+        new_string = ""
+    for demo in DEMOGRAPHICS:
+        extension = f"breakdown_{demo}_rate"
+        group = "group_1"
+        if demo == "total":
+            extension = "total_rate"
+            group = "group_0"
+        elif demo == "prescription":
+            extension = f"breakdown_{demo}_count"
+        results.append(
+            table_geometric_mean(
+                measure_table,
+                f"antidepressant_any_{new_string}all_{extension}",
+                "All prescribing",
+                "group_0",
+            )
         )
-    )
-    results.append(
-        create_gm_row(
-            measure_table,
-            "antidepressant_any_new_all_total_rate",
-            "New prescribing",
+        results.append(
+            table_geometric_mean(
+                measure_table,
+                f"antidepressant_any_{new_string}autism_{extension}",
+                "Autism",
+                group,
+                reference="Recorded autism" if group == "group_0" else None,
+            )
         )
-    )
-    results.append(
-        create_gm_row(
-            measure_table,
-            "antidepressant_any_autism_total_rate",
-            "Autism prescribing",
-            group="group_0",
-            reference="Recorded autism",
+        results.append(
+            table_geometric_mean(
+                measure_table,
+                f"antidepressant_any_{new_string}learning_disability_{extension}",
+                "Learning Disability",
+                group,
+                reference="Recorded learning_disability"
+                if group == "group_0"
+                else None,
+            )
         )
+    df = pandas.concat(results)
+    group_forest(
+        df, as_rr=["All prescribing", "Autism", "Learning Disability"]
     )
-    results.append(
-        create_gm_row(
-            measure_table,
-            "antidepressant_any_new_autism_total_rate",
-            "Autism new prescribing",
-            group="group_0",
-            reference="Recorded autism",
-        )
-    )
-    results.append(
-        create_gm_row(
-            measure_table,
-            "antidepressant_any_learning_disability_total_rate",
-            "LD prescribing",
-            group="group_0",
-            reference="Recorded learning_disability",
-        )
-    )
-    results.append(
-        create_gm_row(
-            measure_table,
-            "antidepressant_any_new_learning_disability_total_rate",
-            "LD new prescribing",
-            group="group_0",
-            reference="Recorded learning_disability",
-        )
-    )
-    import code
-
-    code.interact(local=locals())
 
 
-def plot_all_cf(measure_table, output_dir):
+# TODO: HANDLE MODEL FAILURES (LIKE GM)
+def forest_pcnt_change(measure_table, output_dir, population="all", new=False):
+    results = []
+    if new:
+        new_string = "new_"
+    else:
+        new_string = ""
+    for demo in DEMOGRAPHICS:
+        print(demo)
+        extension = f"breakdown_{demo}_rate"
+        group = "group_1"
+        if demo == "total":
+            extension = "total_rate"
+            group = "group_0"
+        elif demo == "prescription":
+            extension = f"breakdown_{demo}_count"
+        results.append(
+            pcnt_change(
+                measure_table,
+                f"antidepressant_any_{new_string}{population}_{extension}",
+                "group_0" if population == "all" else group,
+                reference=f"Recorded {population}"
+                if group == "group_0" and population != "all"
+                else None,
+            )
+        )
+    df = pandas.concat(results)
+    df.index = pandas.MultiIndex.from_tuples(
+        list(zip(df.index.get_level_values(1), df.index.get_level_values(0)))
+    )
+    # TODO: should we have category as index and column?
+    df.index.names = ["change", "group"]
+    # df = df.reset_index().set_index(["change", "category"])
+    group_forest(
+        df, as_pcnt=["slope", "slope2", "step", "step2"], mapping=MAPPING
+    )
+    plt.savefig(output_dir / f"forest_{population}{new_string}.png")
+
+
+def plot_all_cf(measure_table, output_dir, rr=False):
     fig = plt.figure(figsize=(14, 14), dpi=150)
 
-    model_all, all_data = get_model(
-        measure_table, "antidepressant_any_all_total_rate"
+    models = get_models(
+        measure_table,
+        "antidepressant_any_all_total_rate",
+        "group_0",
     )
-    ax = plot(
+    ax = add_subplot(
         fig,
         (2, 1, 1),
-        model_all,
-        all_data,
+        models,
+        rr=rr,
         title="Any Antidepressant",
     )
 
-    model_all_new, all_data_new = get_model(
-        measure_table,
-        "antidepressant_any_new_all_total_rate",
+    models_new = get_models(
+        measure_table, "antidepressant_any_new_all_total_rate", "group_0"
     )
-    plot(
+    add_subplot(
         fig,
         (2, 1, 2),
-        model_all_new,
-        all_data_new,
+        models_new,
+        rr=rr,
         title="New Antidepressant",
     )
     fig.legend(*ax.get_legend_handles_labels(), fontsize="x-small")
     plt.savefig(output_dir / "cf.png")
 
 
-def plot_all_rr(measure_table, output_dir):
-    fig = plt.figure(figsize=(14, 14), dpi=150)
-
-    model_all, all_data = get_model(
-        measure_table,
-        "antidepressant_any_all_total_rate",
-    )
-    ax = display_rr(
-        fig,
-        (2, 1, 1),
-        model_all,
-        all_data,
-        title="Any Antidepressant",
-    )
-
-    model_all_new, all_data_new = get_model(
-        measure_table,
-        "antidepressant_any_new_all_total_rate",
-    )
-    display_rr(
-        fig,
-        (2, 1, 2),
-        model_all_new,
-        all_data_new,
-        other_ax=ax,
-        title="New Antidepressant",
-    )
-    plt.savefig(output_dir / "rr.png")
-
-
-def plot_any_breakdowns(measure_table, output_dir):
+# NOTE: this function is used
+def plot_any_breakdowns(measure_table, output_dir, new=False):
     fig = plt.figure(figsize=(14, 12), dpi=150, constrained_layout=True)
+    if new:
+        new_string = "new_"
+    else:
+        new_string = ""
     # All
-    model_age_band, age_band_data = get_model(
+    models_age_band = get_models(
         measure_table,
-        "antidepressant_any_all_breakdown_age_band_rate",
-        reference="30-39",
+        f"antidepressant_any_{new_string}all_breakdown_age_band_rate",
         group="group_0",
-        interaction=True,
     )
-    plot(
+    add_subplot(
         fig,
         (4, 2, 1),
-        model_age_band,
-        age_band_data,
+        models_age_band,
         group="group_0",
         title="Age band",
     )
-    model_carehome, carehome_data = get_model(
+    models_carehome = get_models(
         measure_table,
-        "antidepressant_any_all_breakdown_carehome_rate",
+        f"antidepressant_any_{new_string}all_breakdown_carehome_rate",
         group="group_0",
-        reference="Recorded carehome",
-        interaction=True,
     )
-    plot(
+    add_subplot(
         fig,
         (4, 2, 2),
-        model_carehome,
-        carehome_data,
+        models_carehome,
         group="group_0",
-        # other_ax=ax,
         title="Carehome",
+        ylabel="Rate per 1,000 registered patients",
     )
-    model_diagnosis, diagnosis_data = get_model(
+    models_diagnosis = get_models(
         measure_table,
-        "antidepressant_any_all_breakdown_diagnosis_18+_rate",
+        f"antidepressant_any_{new_string}all_breakdown_diagnosis_18+_rate",
         group="group_0",
-        reference="Depression register",
-        interaction=True,
     )
-    plot(
+    add_subplot(
         fig,
         (4, 2, 3),
-        model_diagnosis,
-        diagnosis_data,
+        models_diagnosis,
         group="group_0",
-        # other_ax=ax,
         title="Diagnosis",
         ylabel="Rate per 1,000 registered patients",
     )
-    model_ethnicity, ethnicity_data = get_model(
+    models_ethnicity = get_models(
         measure_table,
-        "antidepressant_any_all_breakdown_ethnicity_rate",
+        f"antidepressant_any_{new_string}all_breakdown_ethnicity_rate",
         group="group_0",
-        reference="White",
-        interaction=True,
     )
-    plot(
+    add_subplot(
         fig,
         (4, 2, 4),
-        model_ethnicity,
-        ethnicity_data,
+        models_ethnicity,
         group="group_0",
-        # other_ax=ax,
         title="Ethnicity",
+        ylabel="Rate per 1,000 registered patients",
     )
-    model_imd, imd_data = get_model(
+    models_imd = get_models(
         measure_table,
-        "antidepressant_any_all_breakdown_imd_rate",
+        f"antidepressant_any_{new_string}all_breakdown_imd_rate",
         group="group_0",
-        reference="3",
-        interaction=True,
     )
-    plot(
+    add_subplot(
         fig,
         (4, 2, 5),
-        model_imd,
-        imd_data,
+        models_imd,
         group="group_0",
-        # other_ax=ax,
         title="IMD",
+        ylabel="Rate per 1,000 registered patients",
     )
-    model_region, region_data = get_model(
+    models_region = get_models(
         measure_table,
-        "antidepressant_any_all_breakdown_region_rate",
+        f"antidepressant_any_{new_string}all_breakdown_region_rate",
         group="group_0",
-        reference="South East",
-        interaction=True,
     )
-    plot(
+    add_subplot(
         fig,
         (4, 2, 6),
-        model_region,
-        region_data,
+        models_region,
         group="group_0",
-        # other_ax=ax,
         title="Region",
+        ylabel="Rate per 1,000 registered patients",
     )
-    model_sex, sex_data = get_model(
+    models_sex = get_models(
         measure_table,
-        "antidepressant_any_all_breakdown_sex_rate",
+        f"antidepressant_any_{new_string}all_breakdown_sex_rate",
         group="group_0",
-        reference="M",
-        interaction=True,
     )
-    plot(
+    add_subplot(
         fig,
         (4, 2, 7),
-        model_sex,
-        sex_data,
+        models_sex,
         group="group_0",
-        # other_ax=ax,
         title="Sex",
+        ylabel="Rate per 1,000 registered patients",
     )
-    model_prescription, prescription_data = get_model(
-        measure_table,
-        "antidepressant_any_all_breakdown_prescription_count",
-        group="group_0",
-        reference="ssri",
-        interaction=True,
-    )
-    plot(
-        fig,
-        (4, 2, 8),
-        model_prescription,
-        prescription_data,
-        group="group_0",
-        # other_ax=ax,
-        title="Prescription",
-    )
+    if not new:
+        models_prescription = get_models(
+            measure_table,
+            f"antidepressant_any_{new_string}all_breakdown_prescription_count",
+            group="group_0",
+        )
+        add_subplot(
+            fig,
+            (4, 2, 8),
+            models_prescription,
+            group="group_0",
+            title="Prescription",
+            ylabel="Rate per 1,000 registered patients",
+        )
 
-    plt.savefig(output_dir / "any_breakdown.png")
+    plt.savefig(output_dir / f"any_{new_string}breakdown.png")
 
 
 def parse_args():
@@ -1393,28 +1233,40 @@ def main():
         )
     ].reset_index(drop=True)
 
-    # figure_2(measure_table, output_dir)
-    # forest(measure_table, output_dir)
-    # table_any_new(measure_table, output_dir)
-
-    # forest_any(measure_table, output_dir)
-    # forest_autism(measure_table, output_dir)
-    # forest_ld(measure_table, output_dir)
-
-    plot_group(
-        measure_table,
-        "antidepressant_any_all_breakdown_region_rate",
-        "group_0",
-        rr=True,
+    forest_pcnt_change(
+        measure_table, output_dir, population="autism", new=False
     )
-    # plot_any_breakdowns(measure_table, output_dir)
-
-    # plot_all_cf(measure_table, output_dir)
-    # plot_all_rr(measure_table, output_dir)
-    # test_gm(measure_table, output_dir)
+    plt.savefig("forest_pcnt.png")
     import code
 
     code.interact(local=locals())
+    # out = pcnt_change(
+    #    measure_table,
+    #    "antidepressant_any_all_breakdown_age_band_rate",
+    #    "group_0",
+    # )
+
+    # Figure 1
+    # CF plot for all, new
+    # plot_all_cf(measure_table, output_dir, rr=True)
+
+    # Figure 2
+    # CF plot for autism/LD
+    # figure_2(measure_table, output_dir, rr=True)
+
+    # Table 3
+    # Table of coefficients for each of the models
+    # table_any_new(measure_table, output_dir)
+
+    # Fitted plot by demographic group
+    # Can specify new/ not new
+    # Can modify the function to use interaction
+    # plot_any_breakdowns(measure_table, output_dir, new=False)
+
+    # Last figure
+    # Forest plot of GM for all, aut, ld; overall and by breakdown
+    # forest_geometric_mean(measure_table, output_dir, new=True)
+    # plt.savefig("forest_gm.png")
 
     # output_acf_pacf(measure_table, output_dir)
 
