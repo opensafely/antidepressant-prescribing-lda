@@ -57,28 +57,33 @@ def redact_df_by_date(measure_table, redact_zeroes=False):
         redacted.group_0.fillna("Unknown", inplace=True)
         groupby += ["group_0"]
     level = f"level_{len(groupby)}"
-    num = (
-        redacted.groupby(groupby)
-        .apply(
-            lambda x: _suppress_column(
-                x.numerator, redact_zeroes=redact_zeroes
+    # If there is only one group
+    if ~(redacted[groupby].nunique() > 1).any():
+        num = _suppress_column(redacted["numerator"])
+        denom = _suppress_column(redacted["denominator"])
+    else:
+        num = (
+            redacted.groupby(groupby)
+            .apply(
+                lambda x: _suppress_column(
+                    x.numerator, redact_zeroes=redact_zeroes
+                )
             )
+            .reset_index()
+            .set_index(level)["numerator"]
+            .sort_index()
         )
-        .reset_index()
-        .set_index(level)["numerator"]
-        .sort_index()
-    )
-    denom = (
-        redacted.groupby(groupby)
-        .apply(
-            lambda x: _suppress_column(
-                x.denominator, redact_zeroes=redact_zeroes
+        denom = (
+            redacted.groupby(groupby)
+            .apply(
+                lambda x: _suppress_column(
+                    x.denominator, redact_zeroes=redact_zeroes
+                )
             )
+            .reset_index()
+            .set_index(level)["denominator"]
+            .sort_index()
         )
-        .reset_index()
-        .set_index(level)["denominator"]
-        .sort_index()
-    )
     redacted.numerator = num
     redacted.denominator = denom
     return redacted
