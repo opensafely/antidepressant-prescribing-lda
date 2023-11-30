@@ -30,7 +30,6 @@ def get_median_table(measure_table):
         data = subset_table(measure_table, start, end)
         data = data.set_index(["category", "group", "date"])
         data = data[["numerator", "denominator"]]
-        data = data.apply(pandas.to_numeric, errors="coerce")
         overall = (
             data.loc[data.iloc[0].name[0]]
             .groupby("date")
@@ -54,18 +53,22 @@ def get_measure_tables(input_file, measures_pattern, measures_list):
     Given either a pattern of list of names, extract the subset of a joined
     measures file based on the 'name' column
     """
-    measure_table = pandas.read_csv(input_file)
+    measure_table = pandas.read_csv(
+        input_file,
+        dtype={"numerator": float, "denominator": float, "value": float},
+        na_values="[REDACTED]",
+    )
 
     if measures_pattern:
         measures_list = match_paths(measure_table["name"], measures_pattern)
         if len(measures_list) == 0:
             raise ValueError("Pattern did not match any files")
-
     if not measures_list:
         return measure_table
-    return measure_table[measure_table["name"].isin(measures_list)]
-
-    return measure_table
+    filtered = measure_table[measure_table["name"].isin(measures_list)]
+    if filtered.empty:
+        raise ValueError("Measures list did not match any files")
+    return filtered
 
 
 def subset_table(measure_table, start_date, end_date):
@@ -123,8 +126,50 @@ def flatten(df):
     return df
 
 
+def reorder_dataframe(df):
+    # Pull out Total
+    total_mask = df.index.get_level_values(0).str.contains("Total")
+    total_row = df[total_mask]
+    remaining = df[~total_mask]
+    if "Ethnicity" in remaining.index.get_level_values(
+        0
+    ) and "Ethnicity16" in remaining.index.get_level_values(0):
+        eth_mask = remaining.index.get_level_values(0).str.contains(
+            "Ethnicity"
+        )
+        all_eth = remaining[eth_mask]
+        remaining = remaining[~eth_mask]
+        all_eth_sorted = all_eth.sort_index(level=1)
+        all_eth_sorted = all_eth_sorted.drop(("Ethnicity16", "Missing"))
+        all_eth_sorted.index = pandas.MultiIndex.from_tuples(
+            [
+                ("Ethnicity", x)
+                for x in list(
+                    all_eth_sorted.index.get_level_values(level=1)
+                    .str.split("-")
+                    .map(lambda x: f"----{x[1]}" if len(x) > 1 else x[0])
+                )
+            ]
+        )
+        remaining = pandas.concat([remaining, all_eth_sorted])
+    # We need a newer version of pandas to run this on the OS image
+    # remaining = remaining.sort_index(key=lambda x: x=="Missing", level=1, sort_remaining=True).sort_index(level=0, sort_remaining=False)
+    remaining["sorter"] = remaining.index.get_level_values(1) == "Missing"
+    remaining["count"] = range(len(remaining))
+    # Sort missing to the bottom of each group, then sort on category alphabetically
+    remaining = remaining.sort_values(["sorter", "count"]).sort_index(
+        level=0, sort_remaining=False
+    )
+    remaining = remaining.drop(["sorter", "count"], errors="ignore", axis=1)
+    combined = pandas.concat([total_row, remaining])
+    return combined
+
+
 def title_multiindex(df):
-    titled = [(a.title(), b.title()) for (a, b) in df.index.to_list()]
+    titled = [
+        (a.title(), b.title() if b != "Unknown" else "Missing")
+        for (a, b) in df.index.to_list()
+    ]
     names = list(map(str.title, df.index.names))
     df.index = pandas.MultiIndex.from_tuples(titled, names=names)
     return df
@@ -178,11 +223,15 @@ def main():
     measure_table = get_measure_tables(
         input_file, measures_pattern, measures_list
     )
+    measure_table = measure_table.replace(
+        "Chinese or Other", "Other Ethnic Groups"
+    )
     flattened = flatten(measure_table)
     median_table = get_median_table(flattened)
     titled = title_multiindex(median_table)
+    reordered = reorder_dataframe(titled)
 
-    titled.to_html(output_dir / output_name, index=True)
+    reordered.to_html(output_dir / output_name, index=True)
 
 
 if __name__ == "__main__":
