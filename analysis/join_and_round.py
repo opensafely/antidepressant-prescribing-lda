@@ -16,7 +16,10 @@ def _check_for_practice(table):
 
 
 def _suppress_column(column, small_number_threshold=5, redact_zeroes=False):
-    small_value_filter = (column > 0) & (column <= small_number_threshold)
+    if redact_zeroes:
+        small_value_filter = (column >= 0) & (column <= small_number_threshold)
+    else:
+        small_value_filter = (column > 0) & (column <= small_number_threshold)
     large_value_filter = column > small_number_threshold
 
     num_small_values = small_value_filter.sum()
@@ -24,10 +27,6 @@ def _suppress_column(column, small_number_threshold=5, redact_zeroes=False):
 
     if num_small_values == 0:
         return column
-
-    # Redact true zeroes only if there are small values
-    if redact_zeroes:
-        column.loc[column == 0] = numpy.nan
 
     small_value_total = column.loc[small_value_filter].sum()
     column.loc[small_value_filter] = numpy.nan
