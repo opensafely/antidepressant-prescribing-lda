@@ -106,6 +106,32 @@ actions:
           # Only output the single summary file
           measure_csv: output/curation/measure_events.csv
 
+  # To compute prevalence
+  generate_study_population_prevalence:
+    run: cohortextractor:latest generate_cohort --study-definition study_definition_prevalence --output-format=csv.gz --output-dir output/curation --index-date-range "2021-03-01"
+    outputs:
+      highly_sensitive:
+        cohort: output/curation/input_prevalence_*.csv.gz
+
+  generate_measures_prevalence:
+      run: cohortextractor:latest generate_measures --study-definition study_definition_prevalence --output-dir=output/curation
+      needs: [generate_study_population_prevalence]
+      outputs:
+        moderately_sensitive:
+          measure_csv: output/curation/measure_antidepressant_any*prevalence.csv
+
+  join_measures_prevalence:
+      run: python:latest python analysis/join_and_round.py
+           --input-files output/curation/measure_antidepressant_any*prevalence.csv
+           --output-dir output/curation/
+           --output-name "measure_prevalence.csv"
+      needs: [generate_measures_prevalence]
+      outputs:
+        moderately_sensitive:
+          # Only output the single summary file
+          measure_csv: output/curation/measure_prevalence.csv
+
+
   ####################
   # Cohort Generation
   ####################
